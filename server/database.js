@@ -298,6 +298,20 @@ async function initPgTables() {
     await pgPool.query("ALTER TABLE inventory ADD COLUMN IF NOT EXISTS model TEXT DEFAULT ''");
     await pgPool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '123456'");
 
+    // Garantizar restricción UNIQUE (store_id, product_id) en store_inventory
+    await pgPool.query(`
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conname = 'store_inventory_store_product_unique'
+        ) AND NOT EXISTS (
+          SELECT 1 FROM pg_constraint WHERE conrelid = 'store_inventory'::regclass AND contype = 'u'
+        ) THEN 
+          ALTER TABLE store_inventory ADD CONSTRAINT store_inventory_store_product_unique UNIQUE (store_id, product_id);
+        END IF; 
+      END $$;
+    `).catch(() => {});
+
     // SEED: Tiendas por defecto
     await pgPool.query(`
       INSERT INTO stores (id, name) VALUES 
