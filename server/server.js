@@ -225,13 +225,13 @@ app.get('/api/dashboard/stats', (req, res) => {
         });
       }
 
-      // 2. Calculate Inventory Metrics
-      db.all('SELECT stock, unitCost FROM inventory', [], (err, invs) => {
+      // 2. Calculate Inventory Metrics from unified view v_inventory_summary (store_inventory is single source of truth)
+      db.all('SELECT stock, unitCost FROM v_inventory_summary', [], (err, invs) => {
         if (!err && Array.isArray(invs)) {
           stats.totalSkus = invs.length;
           invs.forEach(i => {
-            const st = i.stock || 0;
-            const cost = i.unitCost || 0;
+            const st = parseInt(i.stock, 10) || 0;
+            const cost = parseFloat(i.unitCost) || 0;
             stats.totalStock += st;
             stats.inventoryValue += (st * cost);
           });
@@ -297,26 +297,30 @@ app.post('/api/transactions', (req, res) => {
     db.run(query, [id, client, prodName, date, formattedAmount, trxStatus], function (err) {
       if (err) return res.status(500).json({ error: err.message });
 
-      // 2. If status is Completed, deduct stock from Inventory (multi-item or single item)
+      // 2. If status is Completed, deduct physical stock from store_inventory (single source of truth)
       if (trxStatus === 'Completado') {
         if (Array.isArray(items) && items.length > 0) {
           items.forEach(item => {
             if (item.sku) {
               const itemSku = item.sku.trim().toUpperCase();
               const itemQty = Math.max(1, parseInt(item.quantity) || 1);
-              db.get('SELECT stock FROM inventory WHERE UPPER(sku) = ?', [itemSku], (invErr, existing) => {
-                if (existing) {
-                  const newStock = Math.max(0, existing.stock - itemQty);
-                  db.run('UPDATE inventory SET stock = ?, lastUpdated = ? WHERE UPPER(sku) = ?', [newStock, date, itemSku]);
+              db.get('SELECT id FROM products WHERE UPPER(sku) = ?', [itemSku], (pErr, prod) => {
+                if (prod) {
+                  db.run(
+                    'UPDATE store_inventory SET stock = CASE WHEN stock >= ? THEN stock - ? ELSE 0 END WHERE store_id = ? AND product_id = ?',
+                    [itemQty, itemQty, 'tienda_1', prod.id]
+                  );
                 }
               });
             }
           });
         } else if (cleanSku) {
-          db.get('SELECT stock FROM inventory WHERE UPPER(sku) = ?', [cleanSku], (invErr, existing) => {
-            if (existing) {
-              const newStock = Math.max(0, existing.stock - qtySold);
-              db.run('UPDATE inventory SET stock = ?, lastUpdated = ? WHERE UPPER(sku) = ?', [newStock, date, cleanSku]);
+          db.get('SELECT id FROM products WHERE UPPER(sku) = ?', [cleanSku], (pErr, prod) => {
+            if (prod) {
+              db.run(
+                'UPDATE store_inventory SET stock = CASE WHEN stock >= ? THEN stock - ? ELSE 0 END WHERE store_id = ? AND product_id = ?',
+                [qtySold, qtySold, 'tienda_1', prod.id]
+              );
             }
           });
         }
@@ -351,9 +355,9 @@ app.get('/api/batches', (req, res) => {
     if (!batches || batches.length === 0) return res.json([]);
 
     db.all(
-      `SELECT bi.*, i.brand as invBrand, i.model as invModel
+      `SELECT bi.*, p.brand as invBrand, p.model as invModel
        FROM batch_items bi
-       LEFT JOIN inventory i ON UPPER(bi.sku) = UPPER(i.sku)`,
+       LEFT JOIN products p ON UPPER(bi.sku) = UPPER(p.sku)`,
       [],
       (err, items) => {
         if (err) return res.status(500).json({ error: err.message });
@@ -451,7 +455,7 @@ app.post('/api/batches', (req, res) => {
           stmt.run(batchId, item.sku, item.productName, item.brand || '', item.model || '', item.quantity, item.unitCostFob, item.totalFobValue, item.sharePercentage, item.allocatedCustoms, item.allocatedShipping, item.allocatedTax, item.unitTax, item.finalUnitCost, marginFloat, item.finalSellingPrice, item.image);
         });
 
-        // Sequential Inventory Upsert Logic to prevent async race conditions & UNIQUE SKU collisions
+        // Sequential Product & Store Inventory Upsert Logic (store_inventory is single source of truth)
         const processInventoryUpsert = (index) => {
           if (index >= finalItems.length) {
             stmt.finalize(() => {
@@ -471,48 +475,71 @@ app.post('/api/batches', (req, res) => {
 
           const item = finalItems[index];
           const cleanSku = item.sku.trim().toUpperCase();
-          const cleanName = item.productName.trim().toUpperCase();
-          db.get('SELECT * FROM inventory WHERE UPPER(sku) = ?', [cleanSku], (invErr, existing) => {
+          const cleanName = item.productName.trim();
+          db.get('SELECT * FROM products WHERE UPPER(sku) = ?', [cleanSku], (prodErr, existing) => {
             if (existing) {
               const targetSku = existing.sku.toUpperCase();
-              const oldStock = existing.stock || 0;
-              const oldCost = existing.unitCost || 0;
-              const newStock = oldStock + item.quantity;
-              
-              // Apply chosen cost update strategy: 'latest' vs 'weighted'
-              const calculatedCost = costStrategy === 'latest'
-                ? item.finalUnitCost
-                : (newStock > 0 ? ((oldStock * oldCost) + (item.quantity * item.finalUnitCost)) / newStock : item.finalUnitCost);
+              const prodId = existing.id;
 
-              const newCost = parseFloat(calculatedCost.toFixed(2));
-              
-              // Delta and Pct reflect the variation between existing stock cost and new landed batch cost
-              const delta = parseFloat((item.finalUnitCost - oldCost).toFixed(2));
-              const pct = oldCost > 0 ? parseFloat(((delta / oldCost) * 100).toFixed(2)) : 0;
-              const updatedImage = (item.image && !item.image.includes('unsplash.com/photo-1523275335684')) ? item.image : existing.image;
-              const updatedBrand = item.brand || existing.brand || '';
-              const updatedModel = item.model || existing.model || '';
+              // Query current physical stock for this product across all stores
+              db.get('SELECT COALESCE(SUM(stock), 0) AS total_stock FROM store_inventory WHERE product_id = ?', [prodId], (sErr, sRow) => {
+                const oldStock = sRow ? parseInt(sRow.total_stock, 10) : 0;
+                const oldCost = existing.cost_price || 0;
+                const newStock = oldStock + item.quantity;
 
-              db.run(
-                'UPDATE inventory SET name = ?, brand = ?, model = ?, stock = ?, unitCost = ?, previousUnitCost = ?, priceChangeDelta = ?, priceChangePct = ?, image = ?, lastUpdated = ? WHERE UPPER(sku) = ?',
-                [item.productName, updatedBrand, updatedModel, newStock, newCost, oldCost, delta, pct, updatedImage, importDate, targetSku],
-                () => {
-                  db.run(
-                    'INSERT INTO price_history (sku, batchId, oldCost, newCost, delta, pct, changeDate) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                    [targetSku, batchId, oldCost, item.finalUnitCost, delta, pct, importDate],
-                    () => processInventoryUpsert(index + 1)
-                  );
-                }
-              );
-            } else {
-              // Insert New Product in Inventory
-              db.run(
-                'INSERT INTO inventory (sku, name, brand, model, category, stock, unitCost, previousUnitCost, priceChangeDelta, priceChangePct, image, lastUpdated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-                [cleanSku, item.productName, item.brand || '', item.model || '', 'General', item.quantity, item.finalUnitCost, item.finalUnitCost, 0, 0, item.image, importDate],
-                (err) => {
-                  if (err) {
-                    console.error('Error al insertar en inventario SQLite:', err.message);
+                // Apply chosen cost update strategy: 'latest' vs 'weighted'
+                const calculatedCost = costStrategy === 'latest'
+                  ? item.finalUnitCost
+                  : (newStock > 0 ? ((oldStock * oldCost) + (item.quantity * item.finalUnitCost)) / newStock : item.finalUnitCost);
+
+                const newCost = parseFloat(calculatedCost.toFixed(2));
+                const delta = parseFloat((item.finalUnitCost - oldCost).toFixed(2));
+                const pct = oldCost > 0 ? parseFloat(((delta / oldCost) * 100).toFixed(2)) : 0;
+                const updatedImage = (item.image && !item.image.includes('unsplash.com/photo-1523275335684')) ? item.image : existing.image;
+                const updatedBrand = item.brand || existing.brand || '';
+                const updatedModel = item.model || existing.model || '';
+                const updatedSellingPrice = item.finalSellingPrice > 0 ? item.finalSellingPrice : existing.sale_price;
+
+                db.run(
+                  'UPDATE products SET name = ?, brand = ?, model = ?, cost_price = ?, sale_price = ?, image = ? WHERE id = ?',
+                  [cleanName, updatedBrand, updatedModel, newCost, updatedSellingPrice, updatedImage, prodId],
+                  () => {
+                    // Update physical stock in store_inventory for tienda_1
+                    db.run(
+                      `INSERT INTO store_inventory (store_id, product_id, stock) VALUES ('tienda_1', ?, ?)
+                       ON CONFLICT(store_id, product_id) DO UPDATE SET stock = store_inventory.stock + excluded.stock`,
+                      [prodId, item.quantity],
+                      () => {
+                        db.run(
+                          'INSERT INTO price_history (sku, batchId, oldCost, newCost, delta, pct, changeDate) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                          [targetSku, batchId, oldCost, item.finalUnitCost, delta, pct, importDate],
+                          () => processInventoryUpsert(index + 1)
+                        );
+                      }
+                    );
                   }
+                );
+              });
+            } else {
+              // Insert New Product in products and store_inventory
+              db.run(
+                'INSERT INTO products (name, sku, brand, model, category, cost_price, sale_price, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                [cleanName, cleanSku, item.brand || '', item.model || '', 'General', item.finalUnitCost, item.finalSellingPrice, item.image],
+                function (insErr) {
+                  if (insErr) {
+                    console.error('Error al insertar producto desde lote:', insErr.message);
+                    return processInventoryUpsert(index + 1);
+                  }
+                  const newProdId = this.lastID;
+
+                  // Initialize physical stock in store_inventory for tienda_1
+                  const rawDb = db.getRawDb ? db.getRawDb() : db;
+                  const stmtStore = rawDb.prepare(`INSERT INTO store_inventory (store_id, product_id, stock) VALUES (?, ?, ?) ON CONFLICT(store_id, product_id) DO UPDATE SET stock = store_inventory.stock + excluded.stock`);
+                  stmtStore.run('tienda_1', newProdId, item.quantity);
+                  stmtStore.run('tienda_2', newProdId, 0);
+                  stmtStore.run('tienda_3', newProdId, 0);
+                  stmtStore.finalize();
+
                   db.run(
                     'INSERT INTO price_history (sku, batchId, oldCost, newCost, delta, pct, changeDate) VALUES (?, ?, ?, ?, ?, ?, ?)',
                     [cleanSku, batchId, item.finalUnitCost, item.finalUnitCost, 0, 0, importDate],
@@ -541,9 +568,9 @@ app.delete('/api/batches/:id', (req, res) => {
   });
 });
 
-// API Consolidated Inventory & SKU Management
+// API Consolidated Inventory & SKU Management (using v_inventory_summary based on store_inventory)
 app.get('/api/inventory', (req, res) => {
-  db.all('SELECT * FROM inventory ORDER BY sku ASC', [], (err, rows) => {
+  db.all('SELECT * FROM v_inventory_summary ORDER BY sku ASC', [], (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows);
   });
@@ -553,13 +580,13 @@ app.get('/api/inventory/history/:sku', (req, res) => {
   const cleanParam = req.params.sku.trim().toUpperCase();
   const queryName = req.query.name ? String(req.query.name).trim().toUpperCase() : '';
 
-  // 1. Find inventory item by SKU or Name
+  // 1. Find product item by SKU or Name in products
   db.get(
-    'SELECT * FROM inventory WHERE UPPER(sku) = ? OR UPPER(name) = ? OR (LENGTH(?) > 0 AND UPPER(name) = ?)',
+    'SELECT * FROM products WHERE UPPER(sku) = ? OR UPPER(name) = ? OR (LENGTH(?) > 0 AND UPPER(name) = ?)',
     [cleanParam, cleanParam, queryName, queryName],
-    (invErr, invItem) => {
-      const targetSku = invItem ? String(invItem.sku).toUpperCase() : cleanParam;
-      const targetName = invItem ? String(invItem.name).toUpperCase() : (queryName || cleanParam);
+    (prodErr, prodItem) => {
+      const targetSku = prodItem ? String(prodItem.sku).toUpperCase() : cleanParam;
+      const targetName = prodItem ? String(prodItem.name).toUpperCase() : (queryName || cleanParam);
 
       // 2. Directly query ALL batch_items matching SKU or Name
       db.all(
@@ -587,7 +614,7 @@ app.get('/api/inventory/history/:sku', (req, res) => {
                 newCost,
                 delta,
                 pct,
-                changeDate: b.importDate || (invItem ? invItem.lastUpdated : '27 ago 2026'),
+                changeDate: b.importDate || (prodItem ? prodItem.created_at : '27 ago 2026'),
                 unitCostFob: b.unitCostFob,
                 quantity: b.quantity,
                 sharePercentage: b.sharePercentage,
@@ -606,17 +633,17 @@ app.get('/api/inventory/history/:sku', (req, res) => {
           }
 
           // 3. Fallback if no batch_items found
-          if (invItem) {
+          if (prodItem) {
             return res.json([{
               id: 1,
               sku: targetSku,
               batchId: 'Registro de Inventario',
               batchName: 'Costo Base Inicial',
-              oldCost: invItem.previousUnitCost || invItem.unitCost,
-              newCost: invItem.unitCost,
-              delta: invItem.priceChangeDelta || 0,
-              pct: invItem.priceChangePct || 0,
-              changeDate: invItem.lastUpdated || '27 ago 2026'
+              oldCost: prodItem.cost_price || 0,
+              newCost: prodItem.cost_price || 0,
+              delta: 0,
+              pct: 0,
+              changeDate: prodItem.created_at || '27 ago 2026'
             }]);
           }
 
@@ -627,9 +654,9 @@ app.get('/api/inventory/history/:sku', (req, res) => {
   );
 });
 
-// Create Direct SKU / Product in Inventory
+// Create Direct SKU / Product in Inventory (targets products & store_inventory)
 app.post('/api/inventory', (req, res) => {
-  const { sku, name, brand, model, category, stock, unitCost, image } = req.body;
+  const { sku, name, brand, model, category, stock, unitCost, sale_price, image, description } = req.body;
   if (!sku || !name) {
     return res.status(400).json({ error: 'Código SKU y Nombre de producto son requeridos.' });
   }
@@ -641,20 +668,29 @@ app.post('/api/inventory', (req, res) => {
   const cat = category && category.trim() !== '' ? category.trim() : 'General';
   const stockInt = Math.max(0, parseInt(stock) || 0);
   const costFloat = Math.max(0, parseFloat(unitCost) || 0);
+  const saleFloat = Math.max(0, parseFloat(sale_price) || (costFloat * 1.15));
   const imgUrl = image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=150&q=80';
-  const lastUpdated = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  const lastUpdated = new Date().toISOString();
 
-  // Check if SKU exists
-  db.get('SELECT id FROM inventory WHERE UPPER(sku) = ?', [cleanSku], (err, existing) => {
+  // Check if SKU exists in products
+  db.get('SELECT id FROM products WHERE UPPER(sku) = ?', [cleanSku], (err, existing) => {
     if (existing) {
       return res.status(400).json({ error: `El Código SKU "${cleanSku}" ya existe en el inventario.` });
     }
 
-    const query = 'INSERT INTO inventory (sku, name, brand, model, category, stock, unitCost, previousUnitCost, priceChangeDelta, priceChangePct, image, lastUpdated) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    db.run(query, [cleanSku, cleanName, cleanBrand, cleanModel, cat, stockInt, costFloat, costFloat, 0, 0, imgUrl, lastUpdated], function (err) {
+    const query = 'INSERT INTO products (name, sku, brand, model, category, description, cost_price, sale_price, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
+    db.run(query, [cleanName, cleanSku, cleanBrand, cleanModel, cat, description || '', costFloat, saleFloat, imgUrl], function (err) {
       if (err) return res.status(500).json({ error: err.message });
       const insertedId = this.lastID;
-      
+
+      // Assign initial physical stock in store_inventory
+      const rawDb = db.getRawDb ? db.getRawDb() : db;
+      const stmtStore = rawDb.prepare(`INSERT INTO store_inventory (store_id, product_id, stock) VALUES (?, ?, ?) ON CONFLICT(store_id, product_id) DO UPDATE SET stock = store_inventory.stock + excluded.stock`);
+      stmtStore.run('tienda_1', insertedId, stockInt);
+      stmtStore.run('tienda_2', insertedId, 0);
+      stmtStore.run('tienda_3', insertedId, 0);
+      stmtStore.finalize();
+
       // Record initial price entry in price_history timeline
       db.run(
         'INSERT INTO price_history (sku, batchId, oldCost, newCost, delta, pct, changeDate) VALUES (?, ?, ?, ?, ?, ?, ?)',
@@ -670,9 +706,7 @@ app.post('/api/inventory', (req, res) => {
         category: cat,
         stock: stockInt,
         unitCost: costFloat,
-        previousUnitCost: costFloat,
-        priceChangeDelta: 0,
-        priceChangePct: 0,
+        sale_price: saleFloat,
         image: imgUrl,
         lastUpdated
       });
@@ -680,10 +714,10 @@ app.post('/api/inventory', (req, res) => {
   });
 });
 
-// Fast SKU Lookup for Auto-fill
+// Fast SKU Lookup for Auto-fill (from unified view v_inventory_summary)
 app.get('/api/inventory/sku/:sku', (req, res) => {
   const { sku } = req.params;
-  db.get('SELECT * FROM inventory WHERE UPPER(sku) = UPPER(?)', [sku], (err, row) => {
+  db.get('SELECT * FROM v_inventory_summary WHERE UPPER(sku) = UPPER(?)', [sku], (err, row) => {
     if (err) return res.status(500).json({ error: err.message });
     if (!row) return res.status(404).json({ error: 'SKU no encontrado' });
     res.json(row);
@@ -693,16 +727,32 @@ app.get('/api/inventory/sku/:sku', (req, res) => {
 app.put('/api/inventory/:id/stock', (req, res) => {
   const { id } = req.params;
   const { delta } = req.body;
+  const prodId = parseInt(id, 10);
   const deltaInt = parseInt(delta) || 0;
 
-  db.get('SELECT stock FROM inventory WHERE id = ?', [id], (err, row) => {
-    if (err || !row) return res.status(404).json({ error: 'Producto no encontrado.' });
-    const newStock = Math.max(0, row.stock + deltaInt);
-    const date = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (isNaN(prodId)) return res.status(400).json({ error: 'ID de producto inválido.' });
 
-    db.run('UPDATE inventory SET stock = ?, lastUpdated = ? WHERE id = ?', [newStock, date, id], function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true, id, stock: newStock });
+  db.get('SELECT id FROM products WHERE id = ?', [prodId], (err, prod) => {
+    if (err || !prod) return res.status(404).json({ error: 'Producto no encontrado.' });
+
+    // Update physical stock in store_inventory (tienda_1)
+    db.get('SELECT stock FROM store_inventory WHERE store_id = ? AND product_id = ?', ['tienda_1', prodId], (sErr, sRow) => {
+      const currentStock = sRow ? parseInt(sRow.stock, 10) : 0;
+      const newStoreStock = Math.max(0, currentStock + deltaInt);
+
+      db.run(
+        `INSERT INTO store_inventory (store_id, product_id, stock) VALUES ('tienda_1', ?, ?)
+         ON CONFLICT(store_id, product_id) DO UPDATE SET stock = excluded.stock`,
+        [prodId, newStoreStock],
+        (uErr) => {
+          if (uErr) return res.status(500).json({ error: uErr.message });
+          // Return total physical stock across all stores
+          db.get('SELECT COALESCE(SUM(stock), 0) AS total_stock FROM store_inventory WHERE product_id = ?', [prodId], (tErr, tRow) => {
+            const totalStock = tRow ? parseInt(tRow.total_stock, 10) : newStoreStock;
+            res.json({ success: true, id: prodId, stock: totalStock });
+          });
+        }
+      );
     });
   });
 });
@@ -710,19 +760,25 @@ app.put('/api/inventory/:id/stock', (req, res) => {
 app.put('/api/inventory/:id/image', (req, res) => {
   const { id } = req.params;
   const { image } = req.body;
-  const date = new Date().toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  const prodId = parseInt(id, 10);
 
-  db.run('UPDATE inventory SET image = ?, lastUpdated = ? WHERE id = ?', [image, date, id], function (err) {
+  if (isNaN(prodId)) return res.status(400).json({ error: 'ID inválido.' });
+
+  db.run('UPDATE products SET image = ? WHERE id = ?', [image, prodId], function (err) {
     if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true, id, image });
+    res.json({ success: true, id: prodId, image });
   });
 });
 
 app.delete('/api/inventory/:id', (req, res) => {
-  const { id } = req.params;
-  db.run('DELETE FROM inventory WHERE id = ?', [id], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true, id });
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'ID inválido.' });
+
+  db.run('DELETE FROM store_inventory WHERE product_id = ?', [id], () => {
+    db.run('DELETE FROM products WHERE id = ?', [id], function (err) {
+      if (err) return res.status(500).json({ error: err.message });
+      res.json({ success: true, id });
+    });
   });
 });
 
@@ -843,9 +899,9 @@ app.post('/api/products', (req, res) => {
   const salePrice = parseFloat(sale_price) || 0;
   const stocks = initial_stocks || {};
 
-  const queryInsertProduct = `INSERT INTO products (name, sku, description, cost_price, sale_price) VALUES (?, ?, ?, ?, ?)`;
+  const queryInsertProduct = `INSERT INTO products (name, sku, brand, model, category, description, cost_price, sale_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
 
-  db.run(queryInsertProduct, [cleanName, cleanSku, description || '', costPrice, salePrice], function (err) {
+  db.run(queryInsertProduct, [cleanName, cleanSku, (brand || '').trim(), (model || '').trim(), (category || 'General').trim(), description || '', costPrice, salePrice], function (err) {
     if (err) {
       if (err.message && (err.message.includes('UNIQUE constraint failed') || err.message.includes('duplicate key value') || err.code === '23505')) {
         return res.status(400).json({ error: `El código SKU '${cleanSku}' ya existe.` });
@@ -858,7 +914,7 @@ app.post('/api/products', (req, res) => {
 
     const rawDb = db.getRawDb ? db.getRawDb() : db;
 
-    // Insert initial stocks into store_inventory
+    // Insert initial stocks into store_inventory (single source of truth)
     const storeIds = Object.keys(stocks);
     if (storeIds.length > 0) {
       const stmt = rawDb.prepare(`INSERT INTO store_inventory (store_id, product_id, stock) VALUES (?, ?, ?) ON CONFLICT(store_id, product_id) DO UPDATE SET stock = excluded.stock`);
@@ -873,13 +929,6 @@ app.post('/api/products', (req, res) => {
       ['tienda_1', 'tienda_2', 'tienda_3'].forEach(sId => stmt.run(sId, productId));
       stmt.finalize();
     }
-
-    // Keep legacy inventory table in sync
-    const nowStr = new Date().toISOString();
-    db.run(
-      `INSERT INTO inventory (sku, name, brand, model, category, stock, unitCost, lastUpdated) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(sku) DO UPDATE SET stock = excluded.stock, unitCost = excluded.unitCost, lastUpdated = excluded.lastUpdated`,
-      [cleanSku, cleanName, brand || '', model || '', category || 'General', totalStock, costPrice, nowStr]
-    );
 
     res.status(201).json({
       success: true,
@@ -902,11 +951,7 @@ app.delete('/api/products/:id', (req, res) => {
   const id = parseInt(req.params.id, 10);
   if (isNaN(id)) return res.status(400).json({ error: 'ID de producto inválido.' });
 
-  db.get('SELECT sku FROM products WHERE id = ?', [id], (err, prod) => {
-    if (prod) {
-      db.run('DELETE FROM inventory WHERE sku = ?', [prod.sku]);
-    }
-    db.run('DELETE FROM store_inventory WHERE product_id = ?', [id]);
+  db.run('DELETE FROM store_inventory WHERE product_id = ?', [id], () => {
     db.run('DELETE FROM products WHERE id = ?', [id], function (err) {
       if (err) return res.status(500).json({ error: 'Error al eliminar producto: ' + err.message });
       res.json({ success: true, message: 'Producto eliminado exitosamente.' });
@@ -917,7 +962,7 @@ app.delete('/api/products/:id', (req, res) => {
 // 2d. Actualizar producto (precios de costo y venta)
 app.put('/api/products/:id', (req, res) => {
   const id = parseInt(req.params.id, 10);
-  const { name, category, description, cost_price, sale_price } = req.body;
+  const { name, brand, model, category, description, cost_price, sale_price } = req.body;
 
   if (isNaN(id)) return res.status(400).json({ error: 'ID de producto inválido.' });
 
@@ -928,22 +973,22 @@ app.put('/api/products/:id', (req, res) => {
     if (err || !prod) return res.status(404).json({ error: 'Producto no encontrado.' });
 
     const newName = name !== undefined ? name.trim() : prod.name;
-    const newCategory = category !== undefined ? category.trim() : prod.category;
-    const newDesc = description !== undefined ? description.trim() : prod.description;
+    const newBrand = brand !== undefined ? brand.trim() : (prod.brand || '');
+    const newModel = model !== undefined ? model.trim() : (prod.model || '');
+    const newCategory = category !== undefined ? category.trim() : (prod.category || 'General');
+    const newDesc = description !== undefined ? description.trim() : (prod.description || '');
     const newCost = costPrice !== undefined && !isNaN(costPrice) ? costPrice : prod.cost_price;
     const newSale = salePrice !== undefined && !isNaN(salePrice) ? salePrice : prod.sale_price;
 
     db.run(
-      'UPDATE products SET name = ?, description = ?, cost_price = ?, sale_price = ? WHERE id = ?',
-      [newName, newDesc, newCost, newSale, id],
+      'UPDATE products SET name = ?, brand = ?, model = ?, category = ?, description = ?, cost_price = ?, sale_price = ? WHERE id = ?',
+      [newName, newBrand, newModel, newCategory, newDesc, newCost, newSale, id],
       function (err) {
         if (err) return res.status(500).json({ error: 'Error al actualizar producto: ' + err.message });
 
-        db.run('UPDATE inventory SET unitCost = ?, lastUpdated = ? WHERE sku = ?', [newCost, new Date().toISOString(), prod.sku]);
-
         res.json({
           success: true,
-          product: { id, name: newName, description: newDesc, cost_price: newCost, sale_price: newSale },
+          product: { id, name: newName, brand: newBrand, model: newModel, category: newCategory, description: newDesc, cost_price: newCost, sale_price: newSale },
           message: 'Precios del producto actualizados correctamente.'
         });
       }
@@ -982,13 +1027,6 @@ app.post('/api/inventory/stock-entry', (req, res) => {
       if (err) {
         return res.status(500).json({ error: 'Error al registrar entrada de stock: ' + err.message });
       }
-
-      // Also update legacy inventory table stock
-      const nowStr = new Date().toISOString();
-      db.run(
-        `UPDATE inventory SET stock = stock + ?, lastUpdated = ? WHERE sku = ?`,
-        [qty, nowStr, product.sku]
-      );
 
       res.json({
         success: true,

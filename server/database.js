@@ -216,9 +216,13 @@ async function initPgTables() {
         id SERIAL PRIMARY KEY,
         name VARCHAR(255) NOT NULL,
         sku VARCHAR(255) UNIQUE,
+        brand VARCHAR(255) DEFAULT '',
+        model VARCHAR(255) DEFAULT '',
+        category VARCHAR(255) DEFAULT 'General',
         description TEXT,
         cost_price NUMERIC DEFAULT 0,
         sale_price NUMERIC DEFAULT 0,
+        image TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
     `);
@@ -277,7 +281,38 @@ async function initPgTables() {
       );
     `);
 
+    // Vista Unificada de Inventario (Single Source of Truth en store_inventory)
+    await pgPool.query(`
+      CREATE OR REPLACE VIEW v_inventory_summary AS
+      SELECT 
+        p.id,
+        p.sku,
+        p.name,
+        COALESCE(p.brand, '') AS brand,
+        COALESCE(p.model, '') AS model,
+        COALESCE(p.category, 'General') AS category,
+        COALESCE(p.description, '') AS description,
+        p.cost_price,
+        p.sale_price,
+        p.cost_price AS "unitCost",
+        p.cost_price AS "previousUnitCost",
+        0 AS "priceChangeDelta",
+        0 AS "priceChangePct",
+        p.image,
+        COALESCE(SUM(si.stock), 0)::INTEGER AS stock,
+        COALESCE(SUM(si.stock), 0)::INTEGER AS total_stock,
+        p.created_at,
+        p.created_at AS "lastUpdated"
+      FROM products p
+      LEFT JOIN store_inventory si ON p.id = si.product_id
+      GROUP BY p.id, p.sku, p.name, p.brand, p.model, p.category, p.description, p.cost_price, p.sale_price, p.image, p.created_at;
+    `);
+
     // Garantizar columnas en tablas existentes
+    await pgPool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS brand VARCHAR(255) DEFAULT ''");
+    await pgPool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS model VARCHAR(255) DEFAULT ''");
+    await pgPool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS category VARCHAR(255) DEFAULT 'General'");
+    await pgPool.query("ALTER TABLE products ADD COLUMN IF NOT EXISTS image TEXT");
     await pgPool.query("ALTER TABLE batches ADD COLUMN IF NOT EXISTS totalShippingCost NUMERIC DEFAULT 0.0");
     await pgPool.query("ALTER TABLE batches ADD COLUMN IF NOT EXISTS exchangeRateGtq NUMERIC DEFAULT 7.80");
     await pgPool.query("ALTER TABLE batches ADD COLUMN IF NOT EXISTS profitMarginPct NUMERIC DEFAULT 15.0");
@@ -297,6 +332,24 @@ async function initPgTables() {
     await pgPool.query("ALTER TABLE inventory ADD COLUMN IF NOT EXISTS brand TEXT DEFAULT ''");
     await pgPool.query("ALTER TABLE inventory ADD COLUMN IF NOT EXISTS model TEXT DEFAULT ''");
     await pgPool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '123456'");
+
+    // Migración de datos legados si existen en inventory pero no en products / store_inventory
+    await pgPool.query(`
+      INSERT INTO products (name, sku, brand, model, category, cost_price, sale_price, image)
+      SELECT name, sku, COALESCE(brand, ''), COALESCE(model, ''), COALESCE(category, 'General'), unitCost, unitCost, image
+      FROM inventory
+      WHERE sku NOT IN (SELECT sku FROM products WHERE sku IS NOT NULL)
+      ON CONFLICT (sku) DO NOTHING;
+    `).catch(() => {});
+
+    await pgPool.query(`
+      INSERT INTO store_inventory (store_id, product_id, stock)
+      SELECT 'tienda_1', p.id, COALESCE(i.stock, 0)
+      FROM products p
+      JOIN inventory i ON UPPER(p.sku) = UPPER(i.sku)
+      WHERE NOT EXISTS (SELECT 1 FROM store_inventory si WHERE si.product_id = p.id)
+      ON CONFLICT (store_id, product_id) DO NOTHING;
+    `).catch(() => {});
 
     // Garantizar restricción UNIQUE (store_id, product_id) en store_inventory
     await pgPool.query(`
@@ -474,12 +527,66 @@ function initSqliteTables() {
           id INTEGER PRIMARY KEY AUTOINCREMENT,
           name TEXT NOT NULL,
           sku TEXT UNIQUE,
+          brand TEXT DEFAULT '',
+          model TEXT DEFAULT '',
+          category TEXT DEFAULT 'General',
           description TEXT,
           cost_price REAL DEFAULT 0,
           sale_price REAL DEFAULT 0,
+          image TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      sqliteDb.run("ALTER TABLE products ADD COLUMN brand TEXT DEFAULT ''", () => {});
+      sqliteDb.run("ALTER TABLE products ADD COLUMN model TEXT DEFAULT ''", () => {});
+      sqliteDb.run("ALTER TABLE products ADD COLUMN category TEXT DEFAULT 'General'", () => {});
+      sqliteDb.run("ALTER TABLE products ADD COLUMN image TEXT", () => {});
+
+      // Vista Unificada de Inventario (Single Source of Truth en store_inventory)
+      sqliteDb.run("DROP VIEW IF EXISTS v_inventory_summary", () => {
+        sqliteDb.run(`
+          CREATE VIEW IF NOT EXISTS v_inventory_summary AS
+          SELECT 
+            p.id,
+            p.sku,
+            p.name,
+            COALESCE(p.brand, '') AS brand,
+            COALESCE(p.model, '') AS model,
+            COALESCE(p.category, 'General') AS category,
+            COALESCE(p.description, '') AS description,
+            p.cost_price,
+            p.sale_price,
+            p.cost_price AS unitCost,
+            p.cost_price AS previousUnitCost,
+            0 AS priceChangeDelta,
+            0 AS priceChangePct,
+            p.image,
+            COALESCE(SUM(si.stock), 0) AS stock,
+            COALESCE(SUM(si.stock), 0) AS total_stock,
+            p.created_at,
+            p.created_at AS lastUpdated
+          FROM products p
+          LEFT JOIN store_inventory si ON p.id = si.product_id
+          GROUP BY p.id, p.sku, p.name, p.brand, p.model, p.category, p.description, p.cost_price, p.sale_price, p.image, p.created_at
+        `);
+      });
+
+      // Migración de datos legados si existen en inventory pero no en products
+      sqliteDb.run(`
+        INSERT OR IGNORE INTO products (name, sku, brand, model, category, cost_price, sale_price, image)
+        SELECT name, sku, COALESCE(brand, ''), COALESCE(model, ''), COALESCE(category, 'General'), unitCost, unitCost, image
+        FROM inventory
+        WHERE sku NOT IN (SELECT sku FROM products WHERE sku IS NOT NULL)
+      `, () => {});
+
+      sqliteDb.run(`
+        INSERT OR IGNORE INTO store_inventory (store_id, product_id, stock)
+        SELECT 'tienda_1', p.id, COALESCE(i.stock, 0)
+        FROM products p
+        JOIN inventory i ON UPPER(p.sku) = UPPER(i.sku)
+        WHERE NOT EXISTS (SELECT 1 FROM store_inventory si WHERE si.product_id = p.id)
+      `, () => {});
 
       sqliteDb.run(`
         CREATE TABLE IF NOT EXISTS store_inventory (

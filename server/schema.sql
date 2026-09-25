@@ -25,9 +25,13 @@ CREATE TABLE IF NOT EXISTS products (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
   sku VARCHAR(255) UNIQUE,
+  brand VARCHAR(255) DEFAULT '',
+  model VARCHAR(255) DEFAULT '',
+  category VARCHAR(255) DEFAULT 'General',
   description TEXT,
   cost_price NUMERIC DEFAULT 0,
   sale_price NUMERIC DEFAULT 0,
+  image TEXT,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -109,7 +113,7 @@ CREATE TABLE IF NOT EXISTS batch_items (
   image TEXT
 );
 
--- 8. Inventario Consolidado por SKU
+-- 8. Inventario Consolidado por SKU (Legacy)
 CREATE TABLE IF NOT EXISTS inventory (
   id SERIAL PRIMARY KEY,
   sku VARCHAR(255) UNIQUE NOT NULL,
@@ -125,6 +129,31 @@ CREATE TABLE IF NOT EXISTS inventory (
   image TEXT,
   lastUpdated VARCHAR(255) NOT NULL
 );
+
+-- 8b. Vista Unificada de Inventario (Single Source of Truth en store_inventory)
+CREATE OR REPLACE VIEW v_inventory_summary AS
+SELECT 
+  p.id,
+  p.sku,
+  p.name,
+  COALESCE(p.brand, '') AS brand,
+  COALESCE(p.model, '') AS model,
+  COALESCE(p.category, 'General') AS category,
+  COALESCE(p.description, '') AS description,
+  p.cost_price,
+  p.sale_price,
+  p.cost_price AS "unitCost",
+  p.cost_price AS "previousUnitCost",
+  0 AS "priceChangeDelta",
+  0 AS "priceChangePct",
+  p.image,
+  COALESCE(SUM(si.stock), 0) AS stock,
+  COALESCE(SUM(si.stock), 0) AS total_stock,
+  p.created_at,
+  p.created_at AS "lastUpdated"
+FROM products p
+LEFT JOIN store_inventory si ON p.id = si.product_id
+GROUP BY p.id, p.sku, p.name, p.brand, p.model, p.category, p.description, p.cost_price, p.sale_price, p.image, p.created_at;
 
 -- 9. Historial de Variación de Costos
 CREATE TABLE IF NOT EXISTS price_history (
