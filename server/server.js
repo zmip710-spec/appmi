@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import db from './database.js';
+import db, { initDb } from './database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,12 +38,12 @@ app.post('/api/auth/login', (req, res) => {
     if (err) return res.status(500).json({ error: err.message });
 
     if (!user) {
-      // Auto-create default admin user if logging in as admin
-      if (inputUser === 'admin') {
+      // Auto-create default admin user if logging in as admin or admin@appmi.com
+      if (inputUser === 'admin' || inputUser === 'admin@appmi.com') {
         const defaultAdminPass = 'admin';
         const query = 'INSERT INTO users (name, email, role, status, avatar, lastLogin, password) VALUES (?, ?, ?, ?, ?, ?, ?)';
-        db.run(query, ['admin', 'admin@appmi.com', 'Administrador', 'Activo', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80', 'Ahora mismo', defaultAdminPass], function (err) {
-          if (err) return res.status(500).json({ error: err.message });
+        db.run(query, ['admin', 'admin@appmi.com', 'Administrador', 'Activo', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80', 'Ahora mismo', defaultAdminPass], function (insertErr) {
+          if (insertErr) return res.status(500).json({ error: insertErr.message });
           
           if (password && password.trim() !== defaultAdminPass) {
             return res.status(401).json({ error: 'Usuario o contraseña incorrectos.' });
@@ -847,7 +847,7 @@ app.post('/api/products', (req, res) => {
 
   db.run(queryInsertProduct, [cleanName, cleanSku, description || '', costPrice, salePrice], function (err) {
     if (err) {
-      if (err.message && err.message.includes('UNIQUE constraint failed')) {
+      if (err.message && (err.message.includes('UNIQUE constraint failed') || err.message.includes('duplicate key value') || err.code === '23505')) {
         return res.status(400).json({ error: `El código SKU '${cleanSku}' ya existe.` });
       }
       return res.status(500).json({ error: 'Error al registrar producto: ' + err.message });
@@ -856,10 +856,12 @@ app.post('/api/products', (req, res) => {
     const productId = this.lastID;
     let totalStock = 0;
 
+    const rawDb = db.getRawDb ? db.getRawDb() : db;
+
     // Insert initial stocks into store_inventory
     const storeIds = Object.keys(stocks);
     if (storeIds.length > 0) {
-      const stmt = db.getRawDb().prepare(`INSERT INTO store_inventory (store_id, product_id, stock) VALUES (?, ?, ?) ON CONFLICT(store_id, product_id) DO UPDATE SET stock = excluded.stock`);
+      const stmt = rawDb.prepare(`INSERT INTO store_inventory (store_id, product_id, stock) VALUES (?, ?, ?) ON CONFLICT(store_id, product_id) DO UPDATE SET stock = excluded.stock`);
       storeIds.forEach(storeId => {
         const qty = Math.max(0, parseInt(stocks[storeId], 10) || 0);
         totalStock += qty;
@@ -867,7 +869,7 @@ app.post('/api/products', (req, res) => {
       });
       stmt.finalize();
     } else {
-      const stmt = db.getRawDb().prepare(`INSERT INTO store_inventory (store_id, product_id, stock) VALUES (?, ?, 0) ON CONFLICT(store_id, product_id) DO NOTHING`);
+      const stmt = rawDb.prepare(`INSERT INTO store_inventory (store_id, product_id, stock) VALUES (?, ?, 0) ON CONFLICT(store_id, product_id) DO NOTHING`);
       ['tienda_1', 'tienda_2', 'tienda_3'].forEach(sId => stmt.run(sId, productId));
       stmt.finalize();
     }
@@ -1011,11 +1013,7 @@ app.post('/api/transfers', (req, res) => {
     return res.status(400).json({ error: 'La tienda de origen y destino deben ser distintas.' });
   }
 
-  const rawDb = db.getRawDb ? db.getRawDb() : null;
-
-  if (!rawDb) {
-    return res.status(500).json({ error: 'Base de datos no disponible para transacciones.' });
-  }
+  const rawDb = (db.getRawDb && db.getRawDb()) || db;
 
   rawDb.serialize(() => {
     rawDb.run('BEGIN TRANSACTION', (err) => {
@@ -1144,10 +1142,7 @@ app.post('/api/transfers/:id/receive', (req, res) => {
     return res.status(400).json({ error: 'ID de transferencia inválido.' });
   }
 
-  const rawDb = db.getRawDb ? db.getRawDb() : null;
-  if (!rawDb) {
-    return res.status(500).json({ error: 'Base de datos no disponible.' });
-  }
+  const rawDb = (db.getRawDb && db.getRawDb()) || db;
 
   rawDb.serialize(() => {
     rawDb.run('BEGIN TRANSACTION', (err) => {
@@ -1528,6 +1523,15 @@ app.use((err, req, res, next) => {
   });
 });
 
+// Asegurar inicialización y auto-migración de la base de datos antes de escuchar peticiones
+try {
+  await initDb();
+  console.log('✅ Base de datos inicializada y migrada correctamente.');
+} catch (dbErr) {
+  console.error('❌ Error crítico al inicializar base de datos:', dbErr);
+}
+
 app.listen(PORT, '0.0.0.0', () => {
-  console.log(` Servidor AppG corriendo en la red local y pública: http://0.0.0.0:${PORT}`);
+  console.log(`🚀 Servidor AppMi corriendo en la red local y pública: http://0.0.0.0:${PORT}`);
 });
+

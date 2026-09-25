@@ -152,6 +152,8 @@ async function initPgTables() {
         batchId VARCHAR(255) NOT NULL,
         sku VARCHAR(255) NOT NULL DEFAULT 'PROD-001',
         productName VARCHAR(255) NOT NULL,
+        brand VARCHAR(255) DEFAULT '',
+        model VARCHAR(255) DEFAULT '',
         quantity INTEGER NOT NULL,
         unitCostFob NUMERIC NOT NULL,
         totalFobValue NUMERIC NOT NULL,
@@ -173,6 +175,8 @@ async function initPgTables() {
         id SERIAL PRIMARY KEY,
         sku VARCHAR(255) UNIQUE NOT NULL,
         name VARCHAR(255) NOT NULL,
+        brand VARCHAR(255) DEFAULT '',
+        model VARCHAR(255) DEFAULT '',
         category VARCHAR(255) DEFAULT 'General',
         stock INTEGER NOT NULL DEFAULT 0,
         unitCost NUMERIC NOT NULL DEFAULT 0.0,
@@ -198,7 +202,61 @@ async function initPgTables() {
       );
     `);
 
-    // 7. Ventas POS y Detalle
+    // 7. Sucursales / Tiendas
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS stores (
+        id VARCHAR(255) PRIMARY KEY,
+        name VARCHAR(255) NOT NULL
+      );
+    `);
+
+    // 8. Catálogo Maestro de Productos
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS products (
+        id SERIAL PRIMARY KEY,
+        name VARCHAR(255) NOT NULL,
+        sku VARCHAR(255) UNIQUE,
+        description TEXT,
+        cost_price NUMERIC DEFAULT 0,
+        sale_price NUMERIC DEFAULT 0,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    // 9. Existencias por Sucursal
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS store_inventory (
+        id SERIAL PRIMARY KEY,
+        store_id VARCHAR(255) NOT NULL,
+        product_id INTEGER NOT NULL,
+        stock INTEGER NOT NULL DEFAULT 0,
+        UNIQUE(store_id, product_id)
+      );
+    `);
+
+    // 10. Traslados entre Sucursales
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS inventory_transfers (
+        id SERIAL PRIMARY KEY,
+        from_store_id VARCHAR(255) NOT NULL,
+        to_store_id VARCHAR(255) NOT NULL,
+        status VARCHAR(50) DEFAULT 'en_transito',
+        notes TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        received_at TIMESTAMP
+      );
+    `);
+
+    await pgPool.query(`
+      CREATE TABLE IF NOT EXISTS transfer_items (
+        id SERIAL PRIMARY KEY,
+        transfer_id INTEGER NOT NULL,
+        product_id INTEGER NOT NULL,
+        quantity INTEGER NOT NULL
+      );
+    `);
+
+    // 11. Ventas POS y Detalle
     await pgPool.query(`
       CREATE TABLE IF NOT EXISTS sales (
         id SERIAL PRIMARY KEY,
@@ -219,7 +277,7 @@ async function initPgTables() {
       );
     `);
 
-    // Garantizar que todas las columnas existan en tablas PostgreSQL creadas previamente
+    // Garantizar columnas en tablas existentes
     await pgPool.query("ALTER TABLE batches ADD COLUMN IF NOT EXISTS totalShippingCost NUMERIC DEFAULT 0.0");
     await pgPool.query("ALTER TABLE batches ADD COLUMN IF NOT EXISTS exchangeRateGtq NUMERIC DEFAULT 7.80");
     await pgPool.query("ALTER TABLE batches ADD COLUMN IF NOT EXISTS profitMarginPct NUMERIC DEFAULT 15.0");
@@ -230,219 +288,262 @@ async function initPgTables() {
     await pgPool.query("ALTER TABLE batch_items ADD COLUMN IF NOT EXISTS profitMarginPct NUMERIC DEFAULT 15.0");
     await pgPool.query("ALTER TABLE batch_items ADD COLUMN IF NOT EXISTS finalSellingPrice NUMERIC DEFAULT 0.0");
     await pgPool.query("ALTER TABLE batch_items ADD COLUMN IF NOT EXISTS image TEXT");
+    await pgPool.query("ALTER TABLE batch_items ADD COLUMN IF NOT EXISTS brand TEXT DEFAULT ''");
+    await pgPool.query("ALTER TABLE batch_items ADD COLUMN IF NOT EXISTS model TEXT DEFAULT ''");
     await pgPool.query("ALTER TABLE inventory ADD COLUMN IF NOT EXISTS image TEXT");
     await pgPool.query("ALTER TABLE inventory ADD COLUMN IF NOT EXISTS previousUnitCost NUMERIC DEFAULT 0.0");
     await pgPool.query("ALTER TABLE inventory ADD COLUMN IF NOT EXISTS priceChangeDelta NUMERIC DEFAULT 0.0");
     await pgPool.query("ALTER TABLE inventory ADD COLUMN IF NOT EXISTS priceChangePct NUMERIC DEFAULT 0.0");
-    await pgPool.query("ALTER TABLE batch_items ADD COLUMN IF NOT EXISTS brand TEXT DEFAULT ''");
-    await pgPool.query("ALTER TABLE batch_items ADD COLUMN IF NOT EXISTS model TEXT DEFAULT ''");
     await pgPool.query("ALTER TABLE inventory ADD COLUMN IF NOT EXISTS brand TEXT DEFAULT ''");
     await pgPool.query("ALTER TABLE inventory ADD COLUMN IF NOT EXISTS model TEXT DEFAULT ''");
     await pgPool.query("ALTER TABLE users ADD COLUMN IF NOT EXISTS password VARCHAR(255) DEFAULT '123456'");
 
-    console.log('✅ Tablas y esquema de PostgreSQL inicializados correctamente.');
-  } catch (err) {
-    console.error('Error al inicializar las tablas en PostgreSQL:', err);
-  }
-}
-
-if (isPg) {
-  initPgTables();
-} else {
-  // Inicialización de SQLite Local
-  sqliteDb.serialize(() => {
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS users (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        role TEXT NOT NULL,
-        status TEXT DEFAULT 'Activo',
-        avatar TEXT,
-        lastLogin TEXT,
-        password TEXT DEFAULT '123456'
-      )
-    `);
-
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS transactions (
-        id TEXT PRIMARY KEY,
-        client TEXT NOT NULL,
-        service TEXT NOT NULL,
-        date TEXT NOT NULL,
-        amount TEXT NOT NULL,
-        status TEXT NOT NULL
-      )
-    `);
-
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS batches (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL,
-        importDate TEXT NOT NULL,
-        totalCustomsTax REAL NOT NULL DEFAULT 0.0,
-        totalShippingCost REAL NOT NULL DEFAULT 0.0,
-        status TEXT DEFAULT 'Procesado'
-      )
-    `);
-
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS batch_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        batchId TEXT NOT NULL,
-        sku TEXT NOT NULL DEFAULT 'PROD-001',
-        productName TEXT NOT NULL,
-        brand TEXT DEFAULT '',
-        model TEXT DEFAULT '',
-        quantity INTEGER NOT NULL,
-        unitCostFob REAL NOT NULL,
-        totalFobValue REAL NOT NULL,
-        sharePercentage REAL NOT NULL,
-        allocatedTax REAL NOT NULL,
-        unitTax REAL NOT NULL,
-        finalUnitCost REAL NOT NULL,
-        image TEXT,
-        FOREIGN KEY (batchId) REFERENCES batches (id) ON DELETE CASCADE
-      )
-    `);
-
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS inventory (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sku TEXT UNIQUE NOT NULL,
-        name TEXT NOT NULL,
-        brand TEXT DEFAULT '',
-        model TEXT DEFAULT '',
-        category TEXT DEFAULT 'General',
-        stock INTEGER NOT NULL DEFAULT 0,
-        unitCost REAL NOT NULL DEFAULT 0.0,
-        image TEXT,
-        lastUpdated TEXT NOT NULL
-      )
-    `);
-
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS price_history (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sku TEXT NOT NULL,
-        batchId TEXT,
-        oldCost REAL NOT NULL,
-        newCost REAL NOT NULL,
-        delta REAL NOT NULL,
-        pct REAL NOT NULL,
-        changeDate TEXT NOT NULL
-      )
-    `);
-
-    sqliteDb.run("ALTER TABLE batches ADD COLUMN totalShippingCost REAL DEFAULT 0.0", () => {});
-    sqliteDb.run("ALTER TABLE batches ADD COLUMN exchangeRateGtq REAL DEFAULT 7.80", () => {});
-    sqliteDb.run("ALTER TABLE batches ADD COLUMN profitMarginPct REAL DEFAULT 15.0", () => {});
-    sqliteDb.run("ALTER TABLE batches ADD COLUMN costUpdateStrategy TEXT DEFAULT 'weighted'", () => {});
-    sqliteDb.run("ALTER TABLE batch_items ADD COLUMN sku TEXT DEFAULT 'PROD-001'", () => {});
-    sqliteDb.run("ALTER TABLE batch_items ADD COLUMN brand TEXT DEFAULT ''", () => {});
-    sqliteDb.run("ALTER TABLE batch_items ADD COLUMN model TEXT DEFAULT ''", () => {});
-    sqliteDb.run("ALTER TABLE batch_items ADD COLUMN allocatedCustoms REAL DEFAULT 0.0", () => {});
-    sqliteDb.run("ALTER TABLE batch_items ADD COLUMN allocatedShipping REAL DEFAULT 0.0", () => {});
-    sqliteDb.run("ALTER TABLE batch_items ADD COLUMN profitMarginPct REAL DEFAULT 15.0", () => {});
-    sqliteDb.run("ALTER TABLE batch_items ADD COLUMN finalSellingPrice REAL DEFAULT 0.0", () => {});
-    sqliteDb.run("ALTER TABLE batch_items ADD COLUMN image TEXT", () => {});
-    sqliteDb.run("ALTER TABLE inventory ADD COLUMN brand TEXT DEFAULT ''", () => {});
-    sqliteDb.run("ALTER TABLE inventory ADD COLUMN model TEXT DEFAULT ''", () => {});
-    sqliteDb.run("ALTER TABLE inventory ADD COLUMN image TEXT", () => {});
-    sqliteDb.run("ALTER TABLE inventory ADD COLUMN previousUnitCost REAL DEFAULT 0.0", () => {});
-    sqliteDb.run("ALTER TABLE inventory ADD COLUMN priceChangeDelta REAL DEFAULT 0.0", () => {});
-    sqliteDb.run("ALTER TABLE inventory ADD COLUMN priceChangePct REAL DEFAULT 0.0", () => {});
-    sqliteDb.run("ALTER TABLE users ADD COLUMN password TEXT DEFAULT '123456'", () => {});
-
-    // Multi-Store Tables Setup
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS stores (
-        id TEXT PRIMARY KEY,
-        name TEXT NOT NULL
-      )
-    `);
-
-    sqliteDb.run(`
-      INSERT OR IGNORE INTO stores (id, name) VALUES 
+    // SEED: Tiendas por defecto
+    await pgPool.query(`
+      INSERT INTO stores (id, name) VALUES 
       ('tienda_1', 'Tienda Central'),
       ('tienda_2', 'Sucursal Norte'),
       ('tienda_3', 'Sucursal Sur')
+      ON CONFLICT (id) DO NOTHING;
     `);
 
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS products (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        sku TEXT UNIQUE,
-        description TEXT,
-        cost_price REAL DEFAULT 0,
-        sale_price REAL DEFAULT 0,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
+    // SEED: Usuarios administradores y vendedores por defecto
+    await pgPool.query(`
+      INSERT INTO users (name, email, role, status, avatar, lastLogin, password) VALUES 
+      ('admin', 'admin@appmi.com', 'Administrador', 'Activo', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80', 'Ahora mismo', 'admin'),
+      ('admin-gg', 'admin@appg.com', 'Administrador', 'Activo', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80', 'Ahora mismo', 'admin-gg4321$'),
+      ('Usuario1', 'usuario@1.com', 'Vendedor', 'Activo', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80', 'Ahora mismo', 'usuario123')
+      ON CONFLICT (email) DO NOTHING;
     `);
 
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS store_inventory (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        store_id TEXT NOT NULL,
-        product_id INTEGER NOT NULL,
-        stock INTEGER NOT NULL DEFAULT 0,
-        FOREIGN KEY (store_id) REFERENCES stores(id),
-        FOREIGN KEY (product_id) REFERENCES products(id),
-        UNIQUE(store_id, product_id)
-      )
-    `);
+    console.log('✅ Tablas y esquema de PostgreSQL inicializados y migrados correctamente.');
+  } catch (err) {
+    console.error('Error al inicializar las tablas en PostgreSQL:', err);
+    throw err;
+  }
+}
 
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS inventory_transfers (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        from_store_id TEXT NOT NULL,
-        to_store_id TEXT NOT NULL,
-        status TEXT CHECK(status IN ('en_transito', 'completado', 'cancelado')) DEFAULT 'en_transito',
-        notes TEXT,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        received_at DATETIME
-      )
-    `);
+// Inicialización de SQLite Local
+function initSqliteTables() {
+  return new Promise((resolve, reject) => {
+    if (!sqliteDb) return resolve();
 
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS transfer_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        transfer_id INTEGER NOT NULL,
-        product_id INTEGER NOT NULL,
-        quantity INTEGER NOT NULL
-      )
-    `);
+    sqliteDb.serialize(() => {
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS users (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          email TEXT UNIQUE NOT NULL,
+          role TEXT NOT NULL,
+          status TEXT DEFAULT 'Activo',
+          avatar TEXT,
+          lastLogin TEXT,
+          password TEXT DEFAULT '123456'
+        )
+      `);
 
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS sales (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        store_id TEXT NOT NULL,
-        total_amount REAL NOT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS transactions (
+          id TEXT PRIMARY KEY,
+          client TEXT NOT NULL,
+          service TEXT NOT NULL,
+          date TEXT NOT NULL,
+          amount TEXT NOT NULL,
+          status TEXT NOT NULL
+        )
+      `);
 
-    sqliteDb.run(`
-      CREATE TABLE IF NOT EXISTS sale_items (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        sale_id INTEGER NOT NULL,
-        product_id INTEGER NOT NULL,
-        quantity INTEGER NOT NULL,
-        unit_price REAL NOT NULL,
-        subtotal REAL NOT NULL,
-        FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
-      )
-    `);
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS batches (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          importDate TEXT NOT NULL,
+          totalCustomsTax REAL NOT NULL DEFAULT 0.0,
+          totalShippingCost REAL NOT NULL DEFAULT 0.0,
+          status TEXT DEFAULT 'Procesado'
+        )
+      `);
 
-    // Auto-seeding disabled to maintain clean database without demo products.
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS batch_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          batchId TEXT NOT NULL,
+          sku TEXT NOT NULL DEFAULT 'PROD-001',
+          productName TEXT NOT NULL,
+          brand TEXT DEFAULT '',
+          model TEXT DEFAULT '',
+          quantity INTEGER NOT NULL,
+          unitCostFob REAL NOT NULL,
+          totalFobValue REAL NOT NULL,
+          sharePercentage REAL NOT NULL,
+          allocatedTax REAL NOT NULL,
+          unitTax REAL NOT NULL,
+          finalUnitCost REAL NOT NULL,
+          image TEXT,
+          FOREIGN KEY (batchId) REFERENCES batches (id) ON DELETE CASCADE
+        )
+      `);
+
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS inventory (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sku TEXT UNIQUE NOT NULL,
+          name TEXT NOT NULL,
+          brand TEXT DEFAULT '',
+          model TEXT DEFAULT '',
+          category TEXT DEFAULT 'General',
+          stock INTEGER NOT NULL DEFAULT 0,
+          unitCost REAL NOT NULL DEFAULT 0.0,
+          image TEXT,
+          lastUpdated TEXT NOT NULL
+        )
+      `);
+
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS price_history (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sku TEXT NOT NULL,
+          batchId TEXT,
+          oldCost REAL NOT NULL,
+          newCost REAL NOT NULL,
+          delta REAL NOT NULL,
+          pct REAL NOT NULL,
+          changeDate TEXT NOT NULL
+        )
+      `);
+
+      sqliteDb.run("ALTER TABLE batches ADD COLUMN totalShippingCost REAL DEFAULT 0.0", () => {});
+      sqliteDb.run("ALTER TABLE batches ADD COLUMN exchangeRateGtq REAL DEFAULT 7.80", () => {});
+      sqliteDb.run("ALTER TABLE batches ADD COLUMN profitMarginPct REAL DEFAULT 15.0", () => {});
+      sqliteDb.run("ALTER TABLE batches ADD COLUMN costUpdateStrategy TEXT DEFAULT 'weighted'", () => {});
+      sqliteDb.run("ALTER TABLE batch_items ADD COLUMN sku TEXT DEFAULT 'PROD-001'", () => {});
+      sqliteDb.run("ALTER TABLE batch_items ADD COLUMN brand TEXT DEFAULT ''", () => {});
+      sqliteDb.run("ALTER TABLE batch_items ADD COLUMN model TEXT DEFAULT ''", () => {});
+      sqliteDb.run("ALTER TABLE batch_items ADD COLUMN allocatedCustoms REAL DEFAULT 0.0", () => {});
+      sqliteDb.run("ALTER TABLE batch_items ADD COLUMN allocatedShipping REAL DEFAULT 0.0", () => {});
+      sqliteDb.run("ALTER TABLE batch_items ADD COLUMN profitMarginPct REAL DEFAULT 15.0", () => {});
+      sqliteDb.run("ALTER TABLE batch_items ADD COLUMN finalSellingPrice REAL DEFAULT 0.0", () => {});
+      sqliteDb.run("ALTER TABLE batch_items ADD COLUMN image TEXT", () => {});
+      sqliteDb.run("ALTER TABLE inventory ADD COLUMN brand TEXT DEFAULT ''", () => {});
+      sqliteDb.run("ALTER TABLE inventory ADD COLUMN model TEXT DEFAULT ''", () => {});
+      sqliteDb.run("ALTER TABLE inventory ADD COLUMN image TEXT", () => {});
+      sqliteDb.run("ALTER TABLE inventory ADD COLUMN previousUnitCost REAL DEFAULT 0.0", () => {});
+      sqliteDb.run("ALTER TABLE inventory ADD COLUMN priceChangeDelta REAL DEFAULT 0.0", () => {});
+      sqliteDb.run("ALTER TABLE inventory ADD COLUMN priceChangePct REAL DEFAULT 0.0", () => {});
+      sqliteDb.run("ALTER TABLE users ADD COLUMN password TEXT DEFAULT '123456'", () => {});
+
+      // Multi-Store Tables Setup
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS stores (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL
+        )
+      `);
+
+      sqliteDb.run(`
+        INSERT OR IGNORE INTO stores (id, name) VALUES 
+        ('tienda_1', 'Tienda Central'),
+        ('tienda_2', 'Sucursal Norte'),
+        ('tienda_3', 'Sucursal Sur')
+      `);
+
+      // Seed default users in SQLite if not exist
+      sqliteDb.run(`
+        INSERT OR IGNORE INTO users (name, email, role, status, avatar, lastLogin, password) VALUES 
+        ('admin', 'admin@appmi.com', 'Administrador', 'Activo', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80', 'Ahora mismo', 'admin'),
+        ('admin-gg', 'admin@appg.com', 'Administrador', 'Activo', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80', 'Ahora mismo', 'admin-gg4321$'),
+        ('Usuario1', 'usuario@1.com', 'Vendedor', 'Activo', 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&q=80', 'Ahora mismo', 'usuario123')
+      `);
+
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS products (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          name TEXT NOT NULL,
+          sku TEXT UNIQUE,
+          description TEXT,
+          cost_price REAL DEFAULT 0,
+          sale_price REAL DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS store_inventory (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          store_id TEXT NOT NULL,
+          product_id INTEGER NOT NULL,
+          stock INTEGER NOT NULL DEFAULT 0,
+          FOREIGN KEY (store_id) REFERENCES stores(id),
+          FOREIGN KEY (product_id) REFERENCES products(id),
+          UNIQUE(store_id, product_id)
+        )
+      `);
+
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS inventory_transfers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          from_store_id TEXT NOT NULL,
+          to_store_id TEXT NOT NULL,
+          status TEXT CHECK(status IN ('en_transito', 'completado', 'cancelado')) DEFAULT 'en_transito',
+          notes TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+          received_at DATETIME
+        )
+      `);
+
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS transfer_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          transfer_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          quantity INTEGER NOT NULL
+        )
+      `);
+
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS sales (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          store_id TEXT NOT NULL,
+          total_amount REAL NOT NULL,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      sqliteDb.run(`
+        CREATE TABLE IF NOT EXISTS sale_items (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          sale_id INTEGER NOT NULL,
+          product_id INTEGER NOT NULL,
+          quantity INTEGER NOT NULL,
+          unit_price REAL NOT NULL,
+          subtotal REAL NOT NULL,
+          FOREIGN KEY (sale_id) REFERENCES sales(id) ON DELETE CASCADE
+        )
+      `, () => {
+        resolve();
+      });
+    });
   });
 }
+
+// Función unificada de auto-migración / inicialización
+export async function initDb() {
+  if (isPg) {
+    await initPgTables();
+  } else {
+    await initSqliteTables();
+  }
+}
+
+// Ejecución automática al cargar módulo
+initDb().catch(err => {
+  console.error('Error durante la inicialización de la base de datos:', err);
+});
 
 // Adaptador unificado para PostgreSQL / SQLite con normalización automática de CamelCase
 const db = {
   isPg,
-  getRawDb: () => sqliteDb,
+  getRawDb: () => (isPg ? db : sqliteDb),
   all: function (sql, params, cb) {
     if (typeof params === 'function') {
       cb = params;
@@ -495,8 +596,13 @@ const db = {
     params = params || [];
 
     if (isPg) {
+      const trimmed = sql.trim().toUpperCase();
+      if (trimmed === 'BEGIN' || trimmed === 'BEGIN TRANSACTION' || trimmed === 'COMMIT' || trimmed === 'ROLLBACK') {
+        if (cb) cb.call({ lastID: 0, changes: 0 }, null);
+        return;
+      }
       let pgSql = convertSql(sql);
-      if (pgSql.trim().toUpperCase().startsWith('INSERT') && !pgSql.toUpperCase().includes('RETURNING')) {
+      if (trimmed.startsWith('INSERT') && !trimmed.includes('RETURNING')) {
         pgSql += ' RETURNING id';
       }
       pgPool.query(pgSql, params)
