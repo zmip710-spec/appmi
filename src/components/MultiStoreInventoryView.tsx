@@ -71,6 +71,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
   const [notes, setNotes] = useState<string>('');
   const [submitting, setSubmitting] = useState(false);
   const [receivingId, setReceivingId] = useState<number | null>(null);
+  const [transferSearch, setTransferSearch] = useState<string>('');
 
   // 2. Modal: Nuevo Producto (SKU + Precios Q + Distribución por Tienda)
   const [showAddProductModal, setShowAddProductModal] = useState(false);
@@ -278,6 +279,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
     }
     setTransferQty(1);
     setNotes('');
+    setTransferSearch('');
     setShowTransferModal(true);
   };
 
@@ -1116,149 +1118,322 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
       {/* MODAL 2: NUEVO TRASLADO */}
       {showTransferModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+        <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0 rounded-none border-none animate-in fade-in duration-150">
+          {/* 1. Header fijo superior */}
+          <div className="w-full px-8 py-5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                <ArrowRightLeft className="w-5 h-5" />
+              </div>
               <div>
-                <h3 className="font-extrabold text-white text-lg sm:text-xl flex items-center gap-2.5">
-                  <ArrowRightLeft className="w-6 h-6 text-indigo-400" />
+                <h3 className="font-extrabold text-white text-lg sm:text-xl tracking-tight">
                   Crear Traslado entre Tiendas
                 </h3>
-                <p className="text-xs text-slate-400 mt-1">Transfiere stock físico entre sucursales de forma atómica y segura</p>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Transfiere stock físico entre sucursales de forma atómica y segura
+                </p>
               </div>
-              <button
-                onClick={() => setShowTransferModal(false)}
-                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
-                title="Cerrar modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
             </div>
+            <button
+              type="button"
+              onClick={() => setShowTransferModal(false)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition cursor-pointer"
+              title="Volver al Inventario (Esc)"
+            >
+              <X className="w-4 h-4" />
+              <span>Volver al Inventario</span>
+            </button>
+          </div>
 
-            <form onSubmit={handleCreateTransfer} className="space-y-6 text-xs">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Columna Izquierda: Ruta de Envío y Notas */}
-                <div className="lg:col-span-6 space-y-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5">
-                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-800/80">
+          {/* Formulario que contiene cuerpo central scrolleable y footer fijo */}
+          <form onSubmit={handleCreateTransfer} className="flex-1 flex flex-col min-h-0 w-full m-0 p-0">
+            {/* 2. Cuerpo central scrolleable */}
+            <div className="flex-1 w-full px-8 py-8 overflow-y-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto w-full items-start">
+                
+                {/* Columna Izquierda: Ruta y Observaciones */}
+                <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-6 sm:p-7 space-y-6 shadow-inner">
+                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-3 border-b border-slate-800/80">
                     <Building2 className="w-4 h-4" />
                     <span>1. Ruta de Sucursales</span>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="font-semibold text-slate-300 uppercase text-xs">Tienda Origen *</label>
+                  {/* Selectores de Tienda Origen y Tienda Destino */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-start">
+                    <div className="space-y-2">
+                      <label className="font-semibold text-slate-300 uppercase text-xs flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
+                        Tienda Origen (Salida de Stock) *
+                      </label>
                       <select
                         value={fromStoreId}
-                        onChange={(e) => setFromStoreId(e.target.value)}
-                        className="w-full h-11 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs"
+                        onChange={(e) => {
+                          const newFrom = e.target.value;
+                          setFromStoreId(newFrom);
+                          if (newFrom === toStoreId) {
+                            const other = stores.find(s => s.id !== newFrom);
+                            if (other) setToStoreId(other.id);
+                          }
+                        }}
+                        className="w-full h-11 px-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-medium text-xs sm:text-sm focus:border-indigo-500 focus:outline-none transition-colors"
                       >
                         {stores.map(s => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
+                          <option key={s.id} value={s.id}>{s.name} ({s.id})</option>
                         ))}
                       </select>
+                      <p className="text-[11px] text-slate-500">De donde saldrán las existencias físicas</p>
                     </div>
 
-                    <div className="space-y-1.5">
-                      <label className="font-semibold text-slate-300 uppercase text-xs">Tienda Destino *</label>
+                    <div className="space-y-2">
+                      <label className="font-semibold text-slate-300 uppercase text-xs flex items-center gap-1.5">
+                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                        Tienda Destino (Entrada de Stock) *
+                      </label>
                       <select
                         value={toStoreId}
-                        onChange={(e) => setToStoreId(e.target.value)}
-                        className="w-full h-11 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs"
+                        onChange={(e) => {
+                          const newTo = e.target.value;
+                          setToStoreId(newTo);
+                          if (newTo === fromStoreId) {
+                            const other = stores.find(s => s.id !== newTo);
+                            if (other) setFromStoreId(other.id);
+                          }
+                        }}
+                        className="w-full h-11 px-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-medium text-xs sm:text-sm focus:border-indigo-500 focus:outline-none transition-colors"
                       >
                         {stores.map(s => (
-                          <option key={s.id} value={s.id}>{s.name}</option>
+                          <option key={s.id} value={s.id}>{s.name} ({s.id})</option>
                         ))}
                       </select>
+                      <p className="text-[11px] text-slate-500">Donde se recibirán al confirmar recepción</p>
                     </div>
                   </div>
 
-                  <div className="space-y-1.5 pt-2">
-                    <label className="font-semibold text-slate-300 uppercase text-xs">Notas / Observaciones (Opcional)</label>
+                  {/* Resumen visual de la ruta */}
+                  <div className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between text-xs font-mono text-slate-300">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-200">{getStoreName(fromStoreId)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-indigo-400 font-sans text-[11px] font-semibold">
+                      <ArrowRight className="w-4 h-4 animate-pulse" />
+                      <span>En tránsito</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-200">{getStoreName(toStoreId)}</span>
+                    </div>
+                  </div>
+
+                  {/* Notas / Observaciones con altura adecuada */}
+                  <div className="space-y-2 pt-2 border-t border-slate-800/80">
+                    <label className="font-semibold text-slate-300 uppercase text-xs block">
+                      Notas / Observaciones del Traslado (Opcional)
+                    </label>
                     <textarea
-                      rows={3}
-                      placeholder="Ej. Reabastecimiento de existencias para fin de semana..."
+                      rows={4}
+                      placeholder="Ej. Reabastecimiento urgente de existencias para fin de semana..."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs resize-none"
+                      className="w-full p-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs sm:text-sm resize-none transition-colors leading-relaxed"
                     />
+                    <p className="text-[11px] text-slate-500">Estas notas se registrarán en el historial de transferencias.</p>
                   </div>
                 </div>
 
-                {/* Columna Derecha: Selección de Producto y Cantidad */}
-                <div className="lg:col-span-6 space-y-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5">
-                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-800/80">
+                {/* Columna Derecha: Producto y Cantidades */}
+                <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-6 sm:p-7 space-y-6 shadow-inner">
+                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-3 border-b border-slate-800/80">
                     <Boxes className="w-4 h-4" />
                     <span>2. Producto y Cantidades</span>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="font-semibold text-slate-300 uppercase text-xs">Seleccionar Producto *</label>
-                    <select
-                      value={selectedProductId || ''}
-                      onChange={(e) => setSelectedProductId(Number(e.target.value))}
-                      className="w-full h-11 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs"
-                    >
-                      {matrix.map(p => {
-                        let avail = p.stock_tienda_1 || 0;
-                        if (fromStoreId === 'tienda_2') avail = p.stock_tienda_2 || 0;
-                        if (fromStoreId === 'tienda_3') avail = p.stock_tienda_3 || 0;
+                  {/* Selector de producto con buscador integrado */}
+                  <div className="space-y-3">
+                    <label className="font-semibold text-slate-300 uppercase text-xs block">
+                      Seleccionar Producto *
+                    </label>
 
-                        return (
-                          <option key={p.id} value={p.id}>
-                            {p.sku} - {p.name} (Disp: {avail} uds)
-                          </option>
-                        );
-                      })}
-                    </select>
+                    {/* Buscador integrado */}
+                    <div className="relative">
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <input
+                        type="text"
+                        placeholder="Buscar por código SKU o nombre..."
+                        value={transferSearch}
+                        onChange={(e) => setTransferSearch(e.target.value)}
+                        className="w-full h-10 pl-10 pr-8 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none transition-colors"
+                      />
+                      {transferSearch && (
+                        <button
+                          type="button"
+                          onClick={() => setTransferSearch('')}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Select con productos filtrados */}
+                    {(() => {
+                      const filteredList = matrix.filter(p => {
+                        if (!transferSearch.trim()) return true;
+                        const q = transferSearch.toLowerCase();
+                        return (p.name?.toLowerCase().includes(q) || p.sku?.toLowerCase().includes(q));
+                      });
+
+                      return (
+                        <select
+                          value={selectedProductId || ''}
+                          onChange={(e) => setSelectedProductId(Number(e.target.value))}
+                          className="w-full h-11 px-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs sm:text-sm transition-colors"
+                        >
+                          {filteredList.length === 0 ? (
+                            <option value="" disabled>No se encontraron productos coincidentes</option>
+                          ) : (
+                            filteredList.map(p => {
+                              let avail = p.stock_tienda_1 || 0;
+                              if (fromStoreId === 'tienda_2') avail = p.stock_tienda_2 || 0;
+                              if (fromStoreId === 'tienda_3') avail = p.stock_tienda_3 || 0;
+
+                              return (
+                                <option key={p.id} value={p.id}>
+                                  {p.sku} — {p.name} (Disponible: {avail} uds)
+                                </option>
+                              );
+                            })
+                          )}
+                        </select>
+                      );
+                    })()}
                   </div>
 
-                  <div className="space-y-1.5">
-                    <label className="font-semibold text-slate-300 uppercase text-xs">Cantidad a Trasladar (Unidades) *</label>
-                    <input
-                      type="number"
-                      min="1"
-                      required
-                      value={transferQty}
-                      onChange={(e) => setTransferQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                      className="w-full h-11 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-sm focus:border-indigo-500 focus:outline-none"
-                    />
-                  </div>
+                  {/* Tarjeta destacada con el stock disponible en tiempo real */}
+                  {(() => {
+                    const prod = matrix.find(p => p.id === selectedProductId);
+                    let availableStock = 0;
+                    if (prod) {
+                      if (fromStoreId === 'tienda_1') availableStock = prod.stock_tienda_1 || 0;
+                      else if (fromStoreId === 'tienda_2') availableStock = prod.stock_tienda_2 || 0;
+                      else if (fromStoreId === 'tienda_3') availableStock = prod.stock_tienda_3 || 0;
+                    }
 
-                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs flex items-center justify-between text-slate-300 font-mono">
-                    <span className="text-slate-400">Stock actual en origen:</span>
-                    <span className="font-bold text-emerald-400">
-                      {(() => {
-                        const prod = matrix.find(p => p.id === selectedProductId);
-                        if (!prod) return 0;
-                        if (fromStoreId === 'tienda_1') return prod.stock_tienda_1 || 0;
-                        if (fromStoreId === 'tienda_2') return prod.stock_tienda_2 || 0;
-                        if (fromStoreId === 'tienda_3') return prod.stock_tienda_3 || 0;
-                        return 0;
-                      })()} uds disponibles
-                    </span>
-                  </div>
+                    return (
+                      <>
+                        <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between shadow-inner">
+                          <div className="space-y-0.5">
+                            <span className="text-xs text-slate-400 font-semibold uppercase block">Stock Disponible en Origen</span>
+                            <span className="text-xs text-slate-300 font-mono">{getStoreName(fromStoreId)}</span>
+                          </div>
+                          <div className="text-right">
+                            <span className={`text-2xl font-black font-mono block ${availableStock > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                              {availableStock}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-semibold uppercase">unidades físicas</span>
+                          </div>
+                        </div>
+
+                        {/* Input de cantidad a trasladar con botones rápidos */}
+                        <div className="space-y-2">
+                          <label className="font-semibold text-slate-300 uppercase text-xs block">
+                            Cantidad a Trasladar (Unidades) *
+                          </label>
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                            <div className="relative flex-1">
+                              <input
+                                type="number"
+                                min="1"
+                                max={availableStock > 0 ? availableStock : undefined}
+                                required
+                                value={transferQty}
+                                onChange={(e) => setTransferQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                                className="w-full h-11 px-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-base font-bold focus:border-indigo-500 focus:outline-none transition-colors"
+                              />
+                              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-mono">
+                                uds
+                              </span>
+                            </div>
+
+                            {/* Botones rápidos de incremento */}
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setTransferQty(prev => Math.max(1, prev - 1))}
+                                className="h-11 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer"
+                                title="Restar 1 unidad"
+                              >
+                                -1
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTransferQty(prev => (availableStock > 0 ? Math.min(availableStock, prev + 1) : prev + 1))}
+                                className="h-11 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer"
+                                title="Sumar 1 unidad"
+                              >
+                                +1
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTransferQty(prev => (availableStock > 0 ? Math.min(availableStock, prev + 5) : prev + 5))}
+                                className="h-11 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer"
+                                title="Sumar 5 unidades"
+                              >
+                                +5
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setTransferQty(prev => (availableStock > 0 ? Math.min(availableStock, prev + 10) : prev + 10))}
+                                className="h-11 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer"
+                                title="Sumar 10 unidades"
+                              >
+                                +10
+                              </button>
+                              {availableStock > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setTransferQty(availableStock)}
+                                  className="h-11 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition cursor-pointer"
+                                  title="Trasladar todo el stock disponible"
+                                >
+                                  Max ({availableStock})
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {transferQty > availableStock && availableStock > 0 && (
+                            <p className="text-xs text-amber-400 font-semibold flex items-center gap-1.5 mt-1">
+                              <AlertCircle className="w-4 h-4 shrink-0" />
+                              <span>La cantidad indicada ({transferQty}) supera las existencias disponibles en origen ({availableStock} uds).</span>
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    );
+                  })()}
                 </div>
-              </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800">
-                <button
-                  type="button"
-                  onClick={() => setShowTransferModal(false)}
-                  className="h-10 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition cursor-pointer"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  disabled={submitting}
-                  className="h-10 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50 flex items-center gap-2"
-                >
-                  <ArrowRightLeft className="w-4 h-4" />
-                  <span>{submitting ? 'Procesando...' : 'Crear Traslado'}</span>
-                </button>
               </div>
-            </form>
-          </div>
+            </div>
+
+            {/* 3. Footer fijo inferior */}
+            <div className="w-full px-8 py-4 border-t border-slate-800 bg-slate-900/95 flex justify-end items-center gap-4 shrink-0">
+              <button
+                type="button"
+                onClick={() => setShowTransferModal(false)}
+                className="h-10 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition cursor-pointer"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={submitting}
+                className="h-10 px-7 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/25 cursor-pointer disabled:opacity-50 flex items-center gap-2"
+              >
+                <ArrowRightLeft className="w-4 h-4" />
+                <span>{submitting ? 'Procesando...' : 'Crear Traslado'}</span>
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
