@@ -493,7 +493,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                 className="h-8 px-3 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg inline-flex items-center gap-1.5 cursor-pointer shadow transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Nuevo Producto</span>
+                <span>Nuevo Producto</span>
               </button>
 
               <button

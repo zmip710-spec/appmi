@@ -576,7 +576,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
             className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-500 text-white font-bold px-3 py-1.5 rounded-xl text-xs transition shadow-md shadow-blue-600/20 active:scale-95 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            <span>+ Nuevo SKU</span>
+            <span>Nuevo SKU</span>
           </button>
         )}
       </div>
@@ -1012,7 +1012,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
                 className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/20"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ Cargar Entrada de Stock</span>
+                <span>Cargar Entrada de Stock</span>
               </button>
 
               <button
