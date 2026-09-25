@@ -7,7 +7,6 @@ import {
   ChevronUp,
   DollarSign,
   Layers,
-  Image as ImageIcon,
   Sparkles,
   Database,
   TrendingUp,
@@ -20,7 +19,6 @@ import {
 } from 'lucide-react';
 import { ImportBatch, fetchBatches, createBatchApi, deleteBatchApi, fetchInventory, InventoryProduct } from '../services/api';
 import { exportSingleBatchPdf } from '../utils/pdfExport';
-import { ImagePicker } from './ImagePicker';
 
 const fallbackBatches: ImportBatch[] = [
   {
@@ -44,8 +42,7 @@ const fallbackBatches: ImportBatch[] = [
         unitTax: 3.53,
         finalUnitCost: 28.53,
         profitMarginPct: 15.0,
-        finalSellingPrice: 32.81,
-        image: 'https://images.unsplash.com/photo-1546868871-7041f2a55e12?auto=format&fit=crop&w=120&q=80'
+        finalSellingPrice: 32.81
       },
       {
         sku: 'AUD-Q3',
@@ -58,8 +55,7 @@ const fallbackBatches: ImportBatch[] = [
         unitTax: 1.55,
         finalUnitCost: 12.83,
         profitMarginPct: 15.0,
-        finalSellingPrice: 14.81,
-        image: 'https://images.unsplash.com/photo-1590658268037-6bf12165a8df?auto=format&fit=crop&w=120&q=80'
+        finalSellingPrice: 14.81
       },
       {
         sku: 'CARG-M5',
@@ -72,8 +68,7 @@ const fallbackBatches: ImportBatch[] = [
         unitTax: 2.30,
         finalUnitCost: 20.39,
         profitMarginPct: 15.0,
-        finalSellingPrice: 23.72,
-        image: 'https://images.unsplash.com/photo-1622445268465-843857588a36?auto=format&fit=crop&w=120&q=80'
+        finalSellingPrice: 23.72
       },
       {
         sku: 'PWR-20K',
@@ -86,8 +81,7 @@ const fallbackBatches: ImportBatch[] = [
         unitTax: 3.95,
         finalUnitCost: 34.25,
         profitMarginPct: 15.0,
-        finalSellingPrice: 39.74,
-        image: 'https://images.unsplash.com/photo-1609592424074-245152a514d0?auto=format&fit=crop&w=120&q=80'
+        finalSellingPrice: 39.74
       },
       {
         sku: 'HUB-7IN1',
@@ -100,8 +94,7 @@ const fallbackBatches: ImportBatch[] = [
         unitTax: 2.50,
         finalUnitCost: 22.05,
         profitMarginPct: 15.0,
-        finalSellingPrice: 25.64,
-        image: 'https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?auto=format&fit=crop&w=120&q=80'
+        finalSellingPrice: 25.64
       }
     ]
   }
@@ -199,7 +192,7 @@ export const ImportBatchesView: React.FC = () => {
     } catch {}
     return 'weighted';
   });
-  const [inputItems, setInputItems] = useState<Array<{ sku: string; productName: string; quantity: string; unitCostFob: string; image: string }>>(() => {
+  const [inputItems, setInputItems] = useState<Array<{ sku: string; productName: string; quantity: string; unitCostFob: string }>>(() => {
     try {
       const saved = localStorage.getItem('draft_form_batch');
       if (saved) return JSON.parse(saved).inputItems || [];
@@ -315,7 +308,7 @@ export const ImportBatchesView: React.FC = () => {
       totalFob += totalItemFob;
       const sku = item.sku && item.sku.trim() !== '' ? item.sku.trim().toUpperCase() : `PROD-00${idx + 1}`;
       const productName = item.productName && item.productName.trim() !== '' ? item.productName.trim() : `Producto #${idx + 1}`;
-      return { sku, productName, quantity: qty, unitCostFob: cost, totalFobValue: totalItemFob, image: item.image || '' };
+      return { sku, productName, quantity: qty, unitCostFob: cost, totalFobValue: totalItemFob };
     });
     return { previewItems: items, totalBatchFob: totalFob };
   }, [inputItems]);
@@ -361,7 +354,7 @@ export const ImportBatchesView: React.FC = () => {
   const hasStockWithPriceVariation = useMemo(() => detectedPriceVariations.length > 0, [detectedPriceVariations]);
 
   const handleAddItemRow = () => {
-    setInputItems([...inputItems, { sku: '', productName: '', quantity: '1', unitCostFob: '', image: '' }]);
+    setInputItems([...inputItems, { sku: '', productName: '', quantity: '1', unitCostFob: '' }]);
   };
 
   const handleRemoveItemRow = (index: number) => {
@@ -385,7 +378,6 @@ export const ImportBatchesView: React.FC = () => {
       const match = inventoryList.find(inv => inv.sku.toUpperCase() === cleanTyped);
       if (match) {
         updated[index].productName = match.name;
-        if (match.image) updated[index].image = match.image;
         if (match.unitCost && (!updated[index].unitCostFob || updated[index].unitCostFob === '')) {
           updated[index].unitCostFob = match.unitCost.toString();
         }
@@ -399,7 +391,6 @@ export const ImportBatchesView: React.FC = () => {
     const updated = [...inputItems];
     updated[index].sku = inv.sku;
     updated[index].productName = inv.name;
-    if (inv.image) updated[index].image = inv.image;
     if (inv.unitCost) updated[index].unitCostFob = inv.unitCost.toString();
     setInputItems(updated);
     setOpenSkuDropdownIndex(null);
@@ -407,16 +398,14 @@ export const ImportBatchesView: React.FC = () => {
 
   // Single Product Form Entry State inside Modal
   const [isAddingProduct, setIsAddingProduct] = useState(false);
-  const [showImagePickerInForm, setShowImagePickerInForm] = useState(false);
   const [editingItemIndex, setEditingItemIndex] = useState<number | null>(null);
-  const [singleProductForm, setSingleProductForm] = useState<{ sku: string; productName: string; brand: string; model: string; quantity: string; unitCostFob: string; image: string }>({
+  const [singleProductForm, setSingleProductForm] = useState<{ sku: string; productName: string; brand: string; model: string; quantity: string; unitCostFob: string }>({
     sku: '',
     productName: '',
     brand: '',
     model: '',
     quantity: '1',
-    unitCostFob: '',
-    image: ''
+    unitCostFob: ''
   });
 
   const handleOpenSingleProductForm = (indexToEdit: number | null = null) => {
@@ -428,14 +417,11 @@ export const ImportBatchesView: React.FC = () => {
         brand: inputItems[indexToEdit].brand || '',
         model: inputItems[indexToEdit].model || '',
         quantity: inputItems[indexToEdit].quantity || '1',
-        unitCostFob: inputItems[indexToEdit].unitCostFob || '',
-        image: inputItems[indexToEdit].image || ''
+        unitCostFob: inputItems[indexToEdit].unitCostFob || ''
       });
-      setShowImagePickerInForm(!!inputItems[indexToEdit].image);
     } else {
       setEditingItemIndex(null);
-      setSingleProductForm({ sku: '', productName: '', brand: '', model: '', quantity: '1', unitCostFob: '', image: '' });
-      setShowImagePickerInForm(false);
+      setSingleProductForm({ sku: '', productName: '', brand: '', model: '', quantity: '1', unitCostFob: '' });
     }
     setIsAddingProduct(true);
     setOpenSkuDropdownIndex(null);
@@ -453,8 +439,7 @@ export const ImportBatchesView: React.FC = () => {
       brand: singleProductForm.brand.trim(),
       model: singleProductForm.model.trim(),
       quantity: singleProductForm.quantity,
-      unitCostFob: singleProductForm.unitCostFob,
-      image: singleProductForm.image
+      unitCostFob: singleProductForm.unitCostFob
     };
 
     if (editingItemIndex !== null) {
@@ -466,9 +451,8 @@ export const ImportBatchesView: React.FC = () => {
       setInputItems([...inputItems, cleanItem]);
     }
 
-    setSingleProductForm({ sku: '', productName: '', quantity: '1', unitCostFob: '', image: '' });
+    setSingleProductForm({ sku: '', productName: '', brand: '', model: '', quantity: '1', unitCostFob: '' });
     setIsAddingProduct(false);
-    setShowImagePickerInForm(false);
     setOpenSkuDropdownIndex(null);
   };
 
@@ -485,9 +469,8 @@ export const ImportBatchesView: React.FC = () => {
     setProfitMarginPct('15.0');
     setCostUpdateStrategy('weighted');
     setInputItems([]);
-    setSingleProductForm({ sku: '', productName: '', quantity: '1', unitCostFob: '', image: '' });
+    setSingleProductForm({ sku: '', productName: '', brand: '', model: '', quantity: '1', unitCostFob: '' });
     setIsAddingProduct(false);
-    setShowImagePickerInForm(false);
     setEditingItemIndex(null);
     setOpenSkuDropdownIndex(null);
     setShowConfirmModal(false);
@@ -524,8 +507,7 @@ export const ImportBatchesView: React.FC = () => {
           sku: i.sku || '',
           productName: i.productName || 'Producto',
           quantity: Number(i.quantity) || 1,
-          unitCostFob: Number(i.unitCostFob) || 0,
-          image: i.image || ''
+          unitCostFob: Number(i.unitCostFob) || 0
         }))
       };
 
@@ -873,13 +855,7 @@ export const ImportBatchesView: React.FC = () => {
                             >
                               {/* Izquierda: Foto + Título + SKU & Uds */}
                               <div className="flex items-center space-x-2.5 min-w-0 flex-1">
-                                {item.image ? (
-                                  <img src={item.image} alt={item.productName} className="w-9 h-9 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-100 dark:bg-slate-800" />
-                                ) : (
-                                  <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 shrink-0">
-                                    <ImageIcon className="w-4 h-4" />
-                                  </div>
-                                )}
+                                <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs shrink-0">📦</div>
                                 <div className="min-w-0 flex-1">
                                   <h4 className="font-bold text-slate-900 dark:text-white text-xs leading-snug break-words">{displayTitle}</h4>
                                   <div className="flex items-center space-x-1.5 mt-0.5">
@@ -1051,13 +1027,7 @@ export const ImportBatchesView: React.FC = () => {
                                   {/* Producto (Foto, SKU, Marca/Modelo - Nombre, Subtitulo, Cantidad) */}
                                   <td className="py-3 px-4">
                                     <div className="flex items-center space-x-3 min-w-[260px]">
-                                      {item.image ? (
-                                        <img src={item.image} alt={item.productName} className="w-10 h-10 rounded-xl object-cover border border-slate-200 dark:border-slate-700 shrink-0 bg-slate-100 dark:bg-slate-800" />
-                                      ) : (
-                                        <div className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 shrink-0">
-                                          <ImageIcon className="w-5 h-5" />
-                                        </div>
-                                      )}
+                                      <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs shrink-0">📦</div>
                                       <div className="min-w-0">
                                         <div className="flex items-center space-x-2 mb-0.5">
                                           <span className="font-mono text-[11px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-2 py-0.5 rounded border border-blue-200 dark:border-blue-500/20 inline-block">
@@ -1486,7 +1456,6 @@ export const ImportBatchesView: React.FC = () => {
                                   setSingleProductForm(prev => ({
                                     ...prev,
                                     productName: match.name,
-                                    image: match.image || prev.image,
                                     unitCostFob: match.unitCost && !prev.unitCostFob ? match.unitCost.toString() : prev.unitCostFob
                                   }));
                                 }
@@ -1507,7 +1476,6 @@ export const ImportBatchesView: React.FC = () => {
                                           ...prev,
                                           sku: inv.sku,
                                           productName: inv.name,
-                                          image: inv.image || prev.image,
                                           unitCostFob: inv.unitCost ? inv.unitCost.toString() : prev.unitCostFob
                                         }));
                                         setOpenSkuDropdownIndex(null);
@@ -1515,11 +1483,7 @@ export const ImportBatchesView: React.FC = () => {
                                       className="p-2.5 hover:bg-blue-600/30 hover:text-white cursor-pointer flex items-center justify-between transition"
                                     >
                                       <div className="flex items-center space-x-2">
-                                        {inv.image ? (
-                                          <img src={inv.image} alt={inv.name} className="w-7 h-7 rounded-lg object-cover" />
-                                        ) : (
-                                          <div className="w-7 h-7 bg-slate-800 rounded-lg flex items-center justify-center text-[10px]">📦</div>
-                                        )}
+                                        <div className="w-7 h-7 bg-slate-800 rounded-lg flex items-center justify-center text-[10px]">📦</div>
                                         <div>
                                           <span className="font-mono font-bold text-blue-400 block">{inv.sku}</span>
                                           <span className="text-[11px] text-slate-200">{inv.name}</span>
@@ -1700,39 +1664,6 @@ export const ImportBatchesView: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Collapsible Photo Section (Oculta por defecto) */}
-                        {showImagePickerInForm || singleProductForm.image ? (
-                          <div className="space-y-2 pt-1 border-t border-slate-800">
-                            <div className="flex justify-between items-center text-xs">
-                              <span className="font-semibold text-slate-300">Foto del Producto</span>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setShowImagePickerInForm(false);
-                                  setSingleProductForm({ ...singleProductForm, image: '' });
-                                }}
-                                className="text-[11px] text-rose-400 hover:text-rose-300 font-medium"
-                              >
-                                ✕ Quitar Foto
-                              </button>
-                            </div>
-                            <ImagePicker
-                              value={singleProductForm.image || ''}
-                              onChange={(img) => setSingleProductForm({ ...singleProductForm, image: img })}
-                              label="Foto del Producto"
-                            />
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setShowImagePickerInForm(true)}
-                            className="w-full py-2 px-3 bg-slate-800/80 hover:bg-slate-700 text-blue-400 border border-slate-700/80 rounded-xl text-xs font-semibold flex items-center justify-center space-x-1.5 transition cursor-pointer"
-                          >
-                            <ImageIcon className="w-4 h-4" />
-                            <span>+ Adjuntar Foto (Opcional)</span>
-                          </button>
-                        )}
-
                         {/* Sticky Action Button inside Card */}
                         <div className="sticky bottom-0 bg-slate-900 pt-2 pb-1 border-t border-slate-800 flex justify-end space-x-2 z-20">
                           {inputItems.length > 0 && (
@@ -1808,11 +1739,7 @@ export const ImportBatchesView: React.FC = () => {
                               <div key={index} className="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-3 shadow-sm">
                                 {/* Header: Photo, SKU, Name & Qty */}
                                 <div className="flex items-center space-x-3 pb-2 border-b border-slate-800/80">
-                                  {item.image ? (
-                                    <img src={item.image} alt={item.productName} className="w-10 h-10 rounded-lg object-cover border border-slate-700 shrink-0" />
-                                  ) : (
-                                    <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-sm shrink-0">📦</div>
-                                  )}
+                                  <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-sm shrink-0">📦</div>
                                   <div className="min-w-0 flex-1">
                                     <div className="flex items-center justify-between">
                                       <span className="font-mono text-xs font-bold text-blue-400">{item.sku}</span>
@@ -1962,11 +1889,7 @@ export const ImportBatchesView: React.FC = () => {
                   <div key={idx} className="bg-slate-950 p-2.5 rounded-xl border border-slate-800 space-y-1.5 text-xs">
                     <div className="flex justify-between items-center">
                       <div className="flex items-center space-x-2">
-                        {item.image ? (
-                          <img src={item.image} alt={item.productName} className="w-6 h-6 rounded object-cover border border-slate-700 shrink-0" />
-                        ) : (
-                          <span className="text-xs shrink-0">📦</span>
-                        )}
+                        <span className="text-xs shrink-0">📦</span>
                         <div>
                           <span className="font-mono text-blue-400 font-bold mr-1.5">{item.sku}</span>
                           <span className="text-white font-semibold truncate max-w-[140px] sm:max-w-[180px] inline-block align-bottom">{item.productName}</span>
@@ -2219,11 +2142,7 @@ export const ImportBatchesView: React.FC = () => {
                               {/* Product Header */}
                               <div className="flex items-center justify-between border-b border-slate-800 pb-2">
                                 <div className="flex items-center space-x-3 min-w-0">
-                                  {item.image ? (
-                                    <img src={item.image} alt={item.productName} className="w-10 h-10 rounded-lg object-cover border border-slate-700 shrink-0" />
-                                  ) : (
-                                    <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-xs shrink-0">📦</div>
-                                  )}
+                                  <div className="w-10 h-10 rounded-lg bg-slate-800 flex items-center justify-center text-xs shrink-0">📦</div>
                                   <div className="min-w-0">
                                     <div className="flex items-center flex-wrap gap-1.5 mb-1">
                                       <span className="font-mono text-xs font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded border border-blue-500/20">

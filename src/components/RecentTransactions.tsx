@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Database, ShoppingCart, AlertCircle, CheckCircle, Package, Search, Image as ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Database, ShoppingCart, AlertCircle, CheckCircle, Package, Search } from 'lucide-react';
 import { fetchTransactions, createTransaction, updateTransactionStatusApi, deleteTransactionApi, fetchInventory, Transaction, InventoryProduct } from '../services/api';
 
 const fallbackTransactions: Transaction[] = [];
@@ -17,7 +17,6 @@ export interface CartItem {
   unitCost: number;
   quantity: number;
   unitPriceGtq: number; // Unit selling price in GTQ Quetzales
-  image?: string;
 }
 
 export const formatAmountInGtq = (amt: string) => {
@@ -150,8 +149,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({ searchTe
         stock: product.stock,
         unitCost: product.unitCost,
         quantity: 1,
-        unitPriceGtq: parseFloat(priceGtq.toFixed(2)),
-        image: product.image
+        unitPriceGtq: parseFloat(priceGtq.toFixed(2))
       };
       setCartItems([...cartItems, newItem]);
     }
@@ -549,11 +547,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({ searchTe
                           className="p-2.5 hover:bg-blue-50 dark:hover:bg-blue-600/30 hover:text-slate-900 dark:hover:text-white cursor-pointer flex items-center justify-between transition"
                         >
                           <div className="flex items-center space-x-3">
-                            {prod.image ? (
-                              <img src={prod.image} alt={prod.name} className="w-8 h-8 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shadow-sm" />
-                            ) : (
-                              <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs">📦</div>
-                            )}
+                            <div className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-xs shrink-0">📦</div>
                           <div>
                             <span className="font-mono font-bold text-blue-700 dark:text-blue-400 block">{prod.sku} {prod.brand ? `| ${prod.brand}` : ''}</span>
                             <span className="text-xs text-slate-800 dark:text-slate-200 font-semibold">
@@ -616,11 +610,7 @@ export const RecentTransactions: React.FC<RecentTransactionsProps> = ({ searchTe
                           isOverStock ? 'bg-rose-50 dark:bg-rose-950/20 border-rose-200 dark:border-rose-500/40' : 'bg-slate-50 dark:bg-slate-900/90 border-slate-200 dark:border-slate-700/80 shadow-sm'
                         }`}>
                           <div className="flex items-center space-x-3 flex-1 min-w-0">
-                            {item.image ? (
-                              <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover border border-slate-200 dark:border-slate-700 shadow-sm shrink-0" />
-                            ) : (
-                              <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-base shrink-0">📦</div>
-                            )}
+                            <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-base shrink-0">📦</div>
                             <div className="min-w-0">
                               <span className="font-mono text-[10px] font-bold text-blue-700 dark:text-blue-400 bg-blue-50 dark:bg-blue-500/10 px-1.5 py-0.5 rounded border border-blue-200 dark:border-blue-500/20">
                                 {item.sku}

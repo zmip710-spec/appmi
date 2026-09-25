@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { TrendingUp, Layers, PackageCheck, AlertTriangle, ArrowRight, DollarSign, Database, Image as ImageIcon, BarChart3 } from 'lucide-react';
+import { TrendingUp, Layers, PackageCheck, AlertTriangle, ArrowRight, DollarSign, Database, BarChart3 } from 'lucide-react';
 import { fetchDashboardStatsApi, fetchInventory, fetchBatches, DashboardStats, InventoryProduct, ImportBatch } from '../services/api';
 
 export const AnalyticsView: React.FC = () => {
@@ -149,7 +149,6 @@ export const AnalyticsView: React.FC = () => {
           <table className="w-full text-left text-sm text-slate-300">
             <thead className="bg-slate-900/80 text-xs uppercase text-slate-400 font-semibold border-b border-slate-700">
               <tr>
-                <th className="px-6 py-3.5">Foto</th>
                 <th className="px-6 py-3.5">Código SKU</th>
                 <th className="px-6 py-3.5">Producto</th>
                 <th className="px-6 py-3.5">Categoría</th>
@@ -162,7 +161,7 @@ export const AnalyticsView: React.FC = () => {
             <tbody className="divide-y divide-slate-700/60">
               {inventory.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-6 py-8 text-center text-slate-400">
+                  <td colSpan={7} className="px-6 py-8 text-center text-slate-400">
                     No hay productos registrados en SQLite.
                   </td>
                 </tr>
@@ -179,17 +178,9 @@ export const AnalyticsView: React.FC = () => {
                   }
 
                   const itemValue = prod.stock * prod.unitCost;
-                  const defaultImg = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=150&q=80';
 
                   return (
                     <tr key={prod.id} className="hover:bg-slate-700/40 transition">
-                      <td className="px-6 py-3">
-                        <img
-                          src={prod.image || defaultImg}
-                          alt={prod.name}
-                          className="w-9 h-9 rounded-lg object-cover border border-slate-700 shadow"
-                        />
-                      </td>
                       <td className="px-6 py-4 font-mono font-bold text-blue-400">{prod.sku}</td>
                       <td className="px-6 py-4 font-semibold text-white">{prod.name}</td>
                       <td className="px-6 py-4 text-xs text-slate-300">{prod.category || 'General'}</td>

@@ -10,8 +10,6 @@ interface ExportContextData {
   users: User[];
 }
 
-const fallbackImage = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=150&q=80';
-
 const getBaseStyles = () => `
   @page { size: A4; margin: 12mm; }
   * {
@@ -179,7 +177,6 @@ export const exportViewPdf = ({ activeTab, user, stats, inventory, transactions,
         <table>
           <thead>
             <tr>
-              <th style="width: 45px;">Foto</th>
               <th>Código SKU</th>
               <th>Nombre del Producto</th>
               <th>Categoría</th>
@@ -199,7 +196,6 @@ export const exportViewPdf = ({ activeTab, user, stats, inventory, transactions,
 
               return `
                 <tr>
-                  <td><img src="${p.image || fallbackImage}" class="thumb-img" alt="${p.name}" /></td>
                   <td><strong>${p.sku}</strong></td>
                   <td><strong>${p.name}</strong></td>
                   <td>${p.category || 'General'}</td>
@@ -299,7 +295,6 @@ export const exportViewPdf = ({ activeTab, user, stats, inventory, transactions,
             <table>
               <thead>
                 <tr>
-                  <th>Foto</th>
                   <th>SKU</th>
                   <th>Producto</th>
                   <th>Cantidad</th>
@@ -311,7 +306,6 @@ export const exportViewPdf = ({ activeTab, user, stats, inventory, transactions,
               <tbody>
                 ${(b.items || []).map(item => `
                   <tr>
-                    <td><img src="${item.image || fallbackImage}" class="thumb-img" /></td>
                     <td><strong>${item.sku}</strong></td>
                     <td>${item.productName}</td>
                     <td>${item.quantity} uds</td>
@@ -617,7 +611,6 @@ export const exportSingleBatchPdf = (batch: ImportBatch, user?: User | null) => 
       <table>
         <thead>
           <tr>
-            <th style="width: 35px;">Foto</th>
             <th>SKU</th>
             <th>Producto (Marca Modelo - Nombre)</th>
             <th style="text-align: center;">Cantidad</th>
@@ -631,7 +624,6 @@ export const exportSingleBatchPdf = (batch: ImportBatch, user?: User | null) => 
         <tbody>
           ${itemsDetailed.map(item => `
             <tr>
-              <td><img src="${item.image || fallbackImage}" class="thumb-img" alt="${item.productName}" /></td>
               <td><strong>${item.sku}</strong></td>
               <td><strong>${item.displayTitle}</strong></td>
               <td style="text-align: center;"><strong>${item.qty} uds</strong></td>

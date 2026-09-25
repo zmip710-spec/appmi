@@ -409,7 +409,7 @@ app.post('/api/batches', (req, res) => {
     const productName = item.productName && item.productName.trim() !== '' ? item.productName.trim() : `Producto ${index + 1}`;
     const brand = item.brand ? item.brand.trim() : '';
     const model = item.model ? item.model.trim() : '';
-    const image = item.image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=150&q=80';
+    const image = '';
     return { sku, productName, brand, model, quantity: qty, unitCostFob: unitCost, totalFobValue: totalFob, image };
   });
 
@@ -452,7 +452,7 @@ app.post('/api/batches', (req, res) => {
         `);
 
         finalItems.forEach(item => {
-          stmt.run(batchId, item.sku, item.productName, item.brand || '', item.model || '', item.quantity, item.unitCostFob, item.totalFobValue, item.sharePercentage, item.allocatedCustoms, item.allocatedShipping, item.allocatedTax, item.unitTax, item.finalUnitCost, marginFloat, item.finalSellingPrice, item.image);
+          stmt.run(batchId, item.sku, item.productName, item.brand || '', item.model || '', item.quantity, item.unitCostFob, item.totalFobValue, item.sharePercentage, item.allocatedCustoms, item.allocatedShipping, item.allocatedTax, item.unitTax, item.finalUnitCost, marginFloat, item.finalSellingPrice, '');
         });
 
         // Sequential Product & Store Inventory Upsert Logic (store_inventory is single source of truth)
@@ -495,14 +495,13 @@ app.post('/api/batches', (req, res) => {
                 const newCost = parseFloat(calculatedCost.toFixed(2));
                 const delta = parseFloat((item.finalUnitCost - oldCost).toFixed(2));
                 const pct = oldCost > 0 ? parseFloat(((delta / oldCost) * 100).toFixed(2)) : 0;
-                const updatedImage = (item.image && !item.image.includes('unsplash.com/photo-1523275335684')) ? item.image : existing.image;
                 const updatedBrand = item.brand || existing.brand || '';
                 const updatedModel = item.model || existing.model || '';
                 const updatedSellingPrice = item.finalSellingPrice > 0 ? item.finalSellingPrice : existing.sale_price;
 
                 db.run(
                   'UPDATE products SET name = ?, brand = ?, model = ?, cost_price = ?, sale_price = ?, image = ? WHERE id = ?',
-                  [cleanName, updatedBrand, updatedModel, newCost, updatedSellingPrice, updatedImage, prodId],
+                  [cleanName, updatedBrand, updatedModel, newCost, updatedSellingPrice, '', prodId],
                   () => {
                     // Update physical stock in store_inventory for tienda_1
                     db.run(
@@ -524,7 +523,7 @@ app.post('/api/batches', (req, res) => {
               // Insert New Product in products and store_inventory
               db.run(
                 'INSERT INTO products (name, sku, brand, model, category, cost_price, sale_price, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                [cleanName, cleanSku, item.brand || '', item.model || '', 'General', item.finalUnitCost, item.finalSellingPrice, item.image],
+                [cleanName, cleanSku, item.brand || '', item.model || '', 'General', item.finalUnitCost, item.finalSellingPrice, ''],
                 function (insErr) {
                   if (insErr) {
                     console.error('Error al insertar producto desde lote:', insErr.message);
@@ -656,7 +655,7 @@ app.get('/api/inventory/history/:sku', (req, res) => {
 
 // Create Direct SKU / Product in Inventory (targets products & store_inventory)
 app.post('/api/inventory', (req, res) => {
-  const { sku, name, brand, model, category, stock, unitCost, sale_price, image, description } = req.body;
+  const { sku, name, brand, model, category, stock, unitCost, sale_price, description } = req.body;
   if (!sku || !name) {
     return res.status(400).json({ error: 'Código SKU y Nombre de producto son requeridos.' });
   }
@@ -669,7 +668,6 @@ app.post('/api/inventory', (req, res) => {
   const stockInt = Math.max(0, parseInt(stock) || 0);
   const costFloat = Math.max(0, parseFloat(unitCost) || 0);
   const saleFloat = Math.max(0, parseFloat(sale_price) || (costFloat * 1.15));
-  const imgUrl = image || 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=150&q=80';
   const lastUpdated = new Date().toISOString();
 
   // Check if SKU exists in products
@@ -679,7 +677,7 @@ app.post('/api/inventory', (req, res) => {
     }
 
     const query = 'INSERT INTO products (name, sku, brand, model, category, description, cost_price, sale_price, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)';
-    db.run(query, [cleanName, cleanSku, cleanBrand, cleanModel, cat, description || '', costFloat, saleFloat, imgUrl], function (err) {
+    db.run(query, [cleanName, cleanSku, cleanBrand, cleanModel, cat, description || '', costFloat, saleFloat, ''], function (err) {
       if (err) return res.status(500).json({ error: err.message });
       const insertedId = this.lastID;
 
@@ -707,7 +705,6 @@ app.post('/api/inventory', (req, res) => {
         stock: stockInt,
         unitCost: costFloat,
         sale_price: saleFloat,
-        image: imgUrl,
         lastUpdated
       });
     });
@@ -758,16 +755,7 @@ app.put('/api/inventory/:id/stock', (req, res) => {
 });
 
 app.put('/api/inventory/:id/image', (req, res) => {
-  const { id } = req.params;
-  const { image } = req.body;
-  const prodId = parseInt(id, 10);
-
-  if (isNaN(prodId)) return res.status(400).json({ error: 'ID inválido.' });
-
-  db.run('UPDATE products SET image = ? WHERE id = ?', [image, prodId], function (err) {
-    if (err) return res.status(500).json({ error: err.message });
-    res.json({ success: true, id: prodId, image });
-  });
+  res.json({ success: true, message: 'Imágenes deshabilitadas.' });
 });
 
 app.delete('/api/inventory/:id', (req, res) => {

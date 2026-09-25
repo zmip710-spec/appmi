@@ -41,7 +41,6 @@ export interface BatchItem {
   finalUnitCost?: number;
   profitMarginPct?: number;
   finalSellingPrice?: number;
-  image?: string;
 }
 
 export interface ImportBatch {
@@ -69,7 +68,6 @@ export interface InventoryProduct {
   previousUnitCost?: number;
   priceChangeDelta?: number;
   priceChangePct?: number;
-  image?: string;
   lastUpdated: string;
 }
 
@@ -356,7 +354,6 @@ export const createInventoryProductApi = async (data: {
   category?: string;
   stock: number;
   unitCost: number;
-  image?: string;
 }): Promise<InventoryProduct> => {
   const response = await fetch(`${API_BASE_URL}/inventory`, {
     method: 'POST',
@@ -388,14 +385,8 @@ export const updateStockApi = async (id: number | string, delta: number): Promis
   return response.json();
 };
 
-export const updateProductImageApi = async (id: number | string, image: string): Promise<{ success: boolean; image: string }> => {
-  const response = await fetch(`${API_BASE_URL}/inventory/${id}/image`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ image }),
-  });
-  if (!response.ok) throw new Error('Error al actualizar imagen del producto');
-  return response.json();
+export const updateProductImageApi = async (_id: number | string, _image?: string): Promise<{ success: boolean; image: string }> => {
+  return { success: true, image: '' };
 };
 
 export const deleteInventoryProductApi = async (id: number | string): Promise<{ success: boolean }> => {

@@ -8,7 +8,6 @@ import {
   DollarSign,
   Minus,
   Database,
-  Camera,
   Eye,
   TrendingUp,
   Tag,
@@ -29,7 +28,6 @@ import {
   createInventoryApi,
   deleteInventoryApi,
   updateStockApi,
-  updateProductImageApi,
   PriceHistoryEntry,
   fetchPriceHistoryApi,
   fetchStoresApi,
@@ -39,7 +37,6 @@ import {
   Store,
   User
 } from '../services/api';
-import { ImagePicker } from './ImagePicker';
 
 interface InventoryViewProps {
   currentUser?: User | null;
@@ -71,7 +68,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [isDbConnected, setIsDbConnected] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<InventoryProduct | null>(null);
   const [selectedDetailProduct, setSelectedDetailProduct] = useState<InventoryProduct | null>(null);
   const [showHistoryModal, setShowHistoryModal] = useState<boolean>(false);
   const [historyProduct, setHistoryProduct] = useState<InventoryProduct | null>(null);
@@ -79,7 +75,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
   const [stockChangeAmount, setStockChangeAmount] = useState<string>('1');
   const [deleteConfirmProduct, setDeleteConfirmProduct] = useState<InventoryProduct | null>(null);
   const [priceHistory, setPriceHistory] = useState<PriceHistoryEntry[]>([]);
-  const [editImageUrl, setEditImageUrl] = useState<string>('');
   const [selectedProductImportDetails, setSelectedProductImportDetails] = useState<{
     fobUsd: number;
     sharePercentage: number;
@@ -287,13 +282,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
     return '10.0';
   });
   const [salePrice, setSalePrice] = useState<string>('0.0');
-  const [image, setImage] = useState<string>(() => {
-    try {
-      const saved = localStorage.getItem('draft_form_inventory');
-      if (saved) return JSON.parse(saved).image || '';
-    } catch {}
-    return '';
-  });
 
   // Multi-Store Setup & Initial Stock Distribution State
   const [storesList, setStoresList] = useState<Store[]>([]);
@@ -478,24 +466,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
       }
     } catch {
       setInventory(inventory.map((item) => (item.id === stockManageProduct.id ? { ...item, stock: newStock } : item)));
-    }
-  };
-
-  const handleSaveProductImage = async () => {
-    if (!editingProduct) return;
-    try {
-      await updateProductImageApi(editingProduct.id, editImageUrl, editingProduct.sku);
-      setInventory(inventory.map((item) => (item.id === editingProduct.id ? { ...item, image: editImageUrl } : item)));
-      if (selectedDetailProduct?.id === editingProduct.id) {
-        setSelectedDetailProduct({ ...selectedDetailProduct, image: editImageUrl });
-      }
-      setEditingProduct(null);
-    } catch {
-      setInventory(inventory.map((item) => (item.id === editingProduct.id ? { ...item, image: editImageUrl } : item)));
-      if (selectedDetailProduct?.id === editingProduct.id) {
-        setSelectedDetailProduct({ ...selectedDetailProduct, image: editImageUrl });
-      }
-      setEditingProduct(null);
     }
   };
 
@@ -1363,44 +1333,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
                 className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-xs font-bold rounded-xl transition"
               >
                 Listo
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Modal Edit Photo / Image */}
-      {editingProduct && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[100000] flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md p-4 sm:p-6 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-700 pb-3">
-              <div>
-                <h3 className="font-bold text-white text-base">Actualizar Foto del Producto</h3>
-                <span className="text-xs text-blue-400 font-mono font-bold">{editingProduct.sku}</span>
-              </div>
-              <button onClick={() => setEditingProduct(null)} className="text-slate-400 hover:text-white text-base font-bold">✕</button>
-            </div>
-
-            <ImagePicker
-              value={editImageUrl}
-              onChange={(img) => setEditImageUrl(img)}
-              label="Selecciona una nueva foto o captura desde la cámara"
-            />
-
-            <div className="flex justify-end space-x-2 pt-3 border-t border-slate-700">
-              <button
-                type="button"
-                onClick={() => setEditingProduct(null)}
-                className="px-4 py-2 bg-slate-700 hover:bg-slate-600 text-slate-300 text-xs font-semibold rounded-lg"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={handleSaveProductImage}
-                className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold rounded-lg transition shadow-lg shadow-blue-600/20"
-              >
-                Actualizar Foto
               </button>
             </div>
           </div>
