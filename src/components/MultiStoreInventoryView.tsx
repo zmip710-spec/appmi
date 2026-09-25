@@ -410,7 +410,8 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
   };
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+    <>
+      <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
       {/* Toast Notification */}
       {toast.show && (
         <div
@@ -809,10 +810,14 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
           )}
         </div>
       )}
+      </div>
 
       {/* MODAL 1: NUEVO PRODUCTO CON DISTRIBUCIÓN INICIAL */}
       {showAddProductModal && (
-        <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0 rounded-none border-none animate-in fade-in duration-150">
+        <div 
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
+          style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
+        >
           {/* 1. Header (arriba, altura fija) */}
           <div className="w-full px-8 py-4 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-3">
@@ -1118,7 +1123,10 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
       {/* MODAL 2: NUEVO TRASLADO */}
       {showTransferModal && (
-        <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0 rounded-none border-none animate-in fade-in duration-150">
+        <div 
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
+          style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
+        >
           {/* 1. Header fijo superior */}
           <div className="w-full px-8 py-5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-3">
@@ -1865,7 +1873,10 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
       {/* MODAL 6: DETALLE AMPLIO DE TRASLADO */}
       {selectedDetailTransfer && (
-        <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0 rounded-none border-none animate-in fade-in duration-150">
+        <div 
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
+          style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
+        >
           {/* 1. Header fijo superior */}
           <div className="w-full px-8 py-5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
             <div className="space-y-1.5">
@@ -2054,6 +2065,6 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };

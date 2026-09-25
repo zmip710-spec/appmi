@@ -563,7 +563,8 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
   }
 
   return (
-    <div className="space-y-4 min-h-[500px]">
+    <>
+      <div className="space-y-4 min-h-[500px]">
       {/* Compact Minimal Header */}
       <div className="flex items-center justify-between py-2 px-1 border-b border-slate-200 dark:border-slate-800 shrink-0">
         <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">Stock e Inventario</h2>
@@ -861,6 +862,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
           </button>
         </div>
       )}
+      </div>
 
       {/* Detalle de Existencias Multitienda Modal */}
       {selectedDetailProduct && (
@@ -1028,7 +1030,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
 
       {/* Modal Add New Product / SKU directly */}
       {showAddModal && (
-        <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0 rounded-none border-none animate-in fade-in duration-150">
+        <div 
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
+          style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
+        >
           {/* 1. Header (arriba, altura fija) */}
           <div className="w-full px-8 py-4 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
             <div className="flex items-center space-x-3">
@@ -1543,6 +1548,6 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 };
