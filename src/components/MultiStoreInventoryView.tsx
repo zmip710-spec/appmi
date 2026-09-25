@@ -176,6 +176,13 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
   // 6. Modal: Detalle Amplio de Traslado
   const [selectedDetailTransfer, setSelectedDetailTransfer] = useState<InventoryTransfer | null>(null);
 
+  // 7. Traslado Rápido dentro del Detalle de Producto
+  const [quickTransferFromId, setQuickTransferFromId] = useState<string>('tienda_1');
+  const [quickTransferToId, setQuickTransferToId] = useState<string>('tienda_2');
+  const [quickTransferQty, setQuickTransferQty] = useState<number>(1);
+  const [quickTransferNotes, setQuickTransferNotes] = useState<string>('');
+  const [isQuickTransferring, setIsQuickTransferring] = useState<boolean>(false);
+
   const loadData = async (isSilent = false) => {
     if (!isSilent) setLoading(true);
     else setRefreshing(true);
@@ -210,19 +217,23 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
     return () => window.removeEventListener('stores_updated', handleStoresUpdated);
   }, []);
 
-  // Fetch in-transit detail breakdown when a product detail modal opens
-  useEffect(() => {
-    if (!selectedDetailProduct) {
-      setSelectedDetailMatrix(null);
-      return;
-    }
-    let isMounted = true;
-    Promise.all([
-      fetchInventoryMatrixApi(),
-      fetch(`/api/transfers/in-transit/${selectedDetailProduct.id}`).then(r => r.ok ? r.json() : []).catch(() => [])
-    ]).then(([matrixRes, inTransitList]) => {
-      if (!isMounted) return;
-      const found = matrixRes.find(m => m.sku === selectedDetailProduct.sku || m.id === selectedDetailProduct.id);
+  // Obtener existencias físicas de una tienda para el producto seleccionado
+  const getProductStockInStore = (storeId: string) => {
+    if (!selectedDetailProduct) return 0;
+    if (storeId === 'tienda_1') return selectedDetailMatrix?.stock_tienda_1 ?? selectedDetailProduct.stock_tienda_1 ?? 0;
+    if (storeId === 'tienda_2') return selectedDetailMatrix?.stock_tienda_2 ?? selectedDetailProduct.stock_tienda_2 ?? 0;
+    if (storeId === 'tienda_3') return selectedDetailMatrix?.stock_tienda_3 ?? selectedDetailProduct.stock_tienda_3 ?? 0;
+    return 0;
+  };
+
+  // Refrescar reactivamente los datos de existencias y tránsitos del producto
+  const refreshProductDetail = async (productId: number, sku?: string) => {
+    try {
+      const [matrixRes, inTransitList] = await Promise.all([
+        fetchInventoryMatrixApi(),
+        fetch(`/api/transfers/in-transit/${productId}`).then(r => r.ok ? r.json() : []).catch(() => [])
+      ]);
+      const found = matrixRes.find(m => m.id === productId || (sku && m.sku === sku));
       if (found) {
         setSelectedDetailMatrix({
           stock_tienda_1: found.stock_tienda_1 || 0,
@@ -232,32 +243,80 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
           stock_total: found.stock_total || 0,
           transits: Array.isArray(inTransitList) ? inTransitList : []
         });
-      } else {
-        setSelectedDetailMatrix({
-          stock_tienda_1: selectedDetailProduct.stock_tienda_1 || 0,
-          stock_tienda_2: selectedDetailProduct.stock_tienda_2 || 0,
-          stock_tienda_3: selectedDetailProduct.stock_tienda_3 || 0,
-          stock_transito: selectedDetailProduct.stock_transito || 0,
-          stock_total: selectedDetailProduct.stock_total || 0,
-          transits: []
-        });
+        setSelectedDetailProduct(prev => prev ? { ...prev, ...found } : null);
       }
-    }).catch(() => {
-      if (!isMounted) return;
-      setSelectedDetailMatrix({
-        stock_tienda_1: selectedDetailProduct.stock_tienda_1 || 0,
-        stock_tienda_2: selectedDetailProduct.stock_tienda_2 || 0,
-        stock_tienda_3: selectedDetailProduct.stock_tienda_3 || 0,
-        stock_transito: selectedDetailProduct.stock_transito || 0,
-        stock_total: selectedDetailProduct.stock_total || 0,
-        transits: []
-      });
-    });
+    } catch (err) {
+      console.error('Error al refrescar detalle del producto:', err);
+    }
+  };
 
-    return () => {
-      isMounted = false;
-    };
-  }, [selectedDetailProduct]);
+  // Cargar datos al abrir modal y configurar tiendas de traslado rápido
+  useEffect(() => {
+    if (!selectedDetailProduct) {
+      setSelectedDetailMatrix(null);
+      return;
+    }
+
+    refreshProductDetail(selectedDetailProduct.id, selectedDetailProduct.sku);
+
+    const s1 = selectedDetailProduct.stock_tienda_1 || 0;
+    const s2 = selectedDetailProduct.stock_tienda_2 || 0;
+    const s3 = selectedDetailProduct.stock_tienda_3 || 0;
+    let defaultFrom = 'tienda_1';
+    if (s1 > 0) defaultFrom = 'tienda_1';
+    else if (s2 > 0) defaultFrom = 'tienda_2';
+    else if (s3 > 0) defaultFrom = 'tienda_3';
+
+    setQuickTransferFromId(defaultFrom);
+    const other = stores.find(s => s.id !== defaultFrom);
+    setQuickTransferToId(other ? other.id : (defaultFrom === 'tienda_1' ? 'tienda_2' : 'tienda_1'));
+    setQuickTransferQty(1);
+    setQuickTransferNotes('');
+  }, [selectedDetailProduct?.id]);
+
+  // Manejador del traslado rápido entre tiendas desde el detalle de producto
+  const handleQuickTransfer = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDetailProduct) return;
+
+    const originStock = getProductStockInStore(quickTransferFromId);
+    if (originStock <= 0) {
+      triggerToast('La tienda de origen seleccionada no tiene existencias físicas disponibles.', 'error');
+      return;
+    }
+    if (quickTransferQty <= 0 || quickTransferQty > originStock) {
+      triggerToast(`La cantidad a trasladar debe ser entre 1 y ${originStock} unidades.`, 'error');
+      return;
+    }
+    if (quickTransferFromId === quickTransferToId) {
+      triggerToast('La tienda de origen y destino deben ser distintas.', 'error');
+      return;
+    }
+
+    setIsQuickTransferring(true);
+    try {
+      await createTransferApi({
+        from_store_id: quickTransferFromId,
+        to_store_id: quickTransferToId,
+        items: [{ product_id: selectedDetailProduct.id, quantity: quickTransferQty }],
+        notes: quickTransferNotes.trim() ? quickTransferNotes.trim() : undefined
+      });
+
+      triggerToast(`Traslado de ${quickTransferQty} uds iniciado hacia ${getStoreName(quickTransferToId)}.`);
+      setQuickTransferQty(1);
+      setQuickTransferNotes('');
+
+      // Refrescar reactivamente las existencias en tarjetas y en la matriz global
+      await Promise.all([
+        refreshProductDetail(selectedDetailProduct.id, selectedDetailProduct.sku),
+        loadData(true)
+      ]);
+    } catch (err: any) {
+      triggerToast(err.message || 'Error al procesar el traslado rápido.', 'error');
+    } finally {
+      setIsQuickTransferring(false);
+    }
+  };
 
   // Filter matrix by search term
   const filteredMatrix = useMemo(() => {
@@ -1808,6 +1867,179 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                 )}
               </div>
             </div>
+
+            {/* Panel dedicado inferior: Mover existencias entre sucursales */}
+            {(() => {
+              const originStores = stores.filter(s => getProductStockInStore(s.id) > 0);
+              const destinationStores = stores.filter(s => s.id !== quickTransferFromId);
+              const maxStock = getProductStockInStore(quickTransferFromId);
+
+              return (
+                <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-5 sm:p-6 shadow-inner space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/80 pb-3">
+                    <div className="flex items-center gap-2">
+                      <ArrowRightLeft className="w-4 h-4 text-indigo-400" />
+                      <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                        Mover existencias entre sucursales
+                      </h3>
+                    </div>
+                    <span className="text-[11px] text-slate-400">
+                      Traslado directo e instantáneo de este SKU entre tiendas
+                    </span>
+                  </div>
+
+                  {originStores.length === 0 ? (
+                    <div className="p-4 bg-slate-950/60 border border-slate-800 rounded-xl text-center text-xs text-slate-400 font-medium">
+                      No hay existencias físicas en ninguna sucursal disponibles para trasladar.
+                    </div>
+                  ) : (
+                    <form onSubmit={handleQuickTransfer} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3.5 items-end">
+                        {/* 1. Selector Origen (3 cols) */}
+                        <div className="lg:col-span-3 space-y-1.5">
+                          <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block"></span>
+                            Tienda Origen (Salida) *
+                          </label>
+                          <select
+                            value={quickTransferFromId}
+                            onChange={(e) => {
+                              const newFrom = e.target.value;
+                              setQuickTransferFromId(newFrom);
+                              if (newFrom === quickTransferToId) {
+                                const other = stores.find(s => s.id !== newFrom);
+                                if (other) setQuickTransferToId(other.id);
+                              }
+                              const stock = getProductStockInStore(newFrom);
+                              if (quickTransferQty > stock && stock > 0) {
+                                setQuickTransferQty(stock);
+                              }
+                            }}
+                            className="w-full h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium text-xs focus:border-indigo-500 focus:outline-none transition-colors"
+                          >
+                            {originStores.map(s => {
+                              const stock = getProductStockInStore(s.id);
+                              return (
+                                <option key={s.id} value={s.id}>
+                                  {s.name} ({stock} uds)
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+
+                        {/* 2. Selector Destino (3 cols) */}
+                        <div className="lg:col-span-3 space-y-1.5">
+                          <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
+                            Tienda Destino (Entrada) *
+                          </label>
+                          <select
+                            value={quickTransferToId}
+                            onChange={(e) => setQuickTransferToId(e.target.value)}
+                            className="w-full h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium text-xs focus:border-indigo-500 focus:outline-none transition-colors"
+                          >
+                            {destinationStores.map(s => {
+                              const curStock = getProductStockInStore(s.id);
+                              return (
+                                <option key={s.id} value={s.id}>
+                                  {s.name} (Stock actual: {curStock} uds)
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+
+                        {/* 3. Input Cantidad + Botones Rápidos (3 cols) */}
+                        <div className="lg:col-span-3 space-y-1.5">
+                          <label className="text-[11px] font-medium text-slate-300 block">
+                            Cantidad a Mover *
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <div className="relative flex-1">
+                              <input
+                                type="number"
+                                min="1"
+                                max={maxStock > 0 ? maxStock : undefined}
+                                required
+                                value={quickTransferQty}
+                                onChange={(e) => setQuickTransferQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                                className="w-full h-9 px-2.5 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono text-xs font-bold focus:border-indigo-500 focus:outline-none transition-colors"
+                              />
+                              <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-slate-400 font-mono">
+                                uds
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-1 shrink-0">
+                              <button
+                                type="button"
+                                onClick={() => setQuickTransferQty(prev => (maxStock > 0 ? Math.min(maxStock, prev + 1) : prev + 1))}
+                                className="h-9 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition cursor-pointer"
+                                title="Sumar 1 unidad"
+                              >
+                                +1
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setQuickTransferQty(prev => (maxStock > 0 ? Math.min(maxStock, prev + 5) : prev + 5))}
+                                className="h-9 px-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition cursor-pointer"
+                                title="Sumar 5 unidades"
+                              >
+                                +5
+                              </button>
+                              {maxStock > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => setQuickTransferQty(maxStock)}
+                                  className="h-9 px-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold transition cursor-pointer"
+                                  title="Todo el stock disponible"
+                                >
+                                  Max
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* 4. Campo de notas breve/opcional (2 cols) */}
+                        <div className="lg:col-span-2 space-y-1.5">
+                          <label className="text-[11px] font-medium text-slate-300 block truncate">
+                            Nota (Opcional)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ej. Reabastecimiento..."
+                            value={quickTransferNotes}
+                            onChange={(e) => setQuickTransferNotes(e.target.value)}
+                            className="w-full h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none transition-colors"
+                          />
+                        </div>
+
+                        {/* 5. Botón de acción: Mover Stock (1 col) */}
+                        <div className="lg:col-span-1">
+                          <button
+                            type="submit"
+                            disabled={isQuickTransferring || maxStock <= 0}
+                            className="w-full h-9 px-3 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50 flex items-center justify-center gap-1.5 whitespace-nowrap"
+                            title="Ejecutar traslado inmediato"
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5 shrink-0" />
+                            <span>{isQuickTransferring ? 'Moviendo...' : 'Mover Stock'}</span>
+                          </button>
+                        </div>
+                      </div>
+
+                      {quickTransferQty > maxStock && maxStock > 0 && (
+                        <p className="text-xs text-amber-400 font-medium flex items-center gap-1.5">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
+                          <span>La cantidad indicada ({quickTransferQty}) supera las existencias en origen ({maxStock} uds).</span>
+                        </p>
+                      )}
+                    </form>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </div>
 
