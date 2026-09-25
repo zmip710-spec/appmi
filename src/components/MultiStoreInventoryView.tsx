@@ -2128,30 +2128,30 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
           style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
         >
           {/* 1. Header fijo superior */}
-          <div className="w-full px-8 py-5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+          <div className="w-full px-6 py-3 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
                   <ArrowRightLeft className="w-5 h-5" />
                 </div>
-                <h3 className="font-extrabold text-white text-xl sm:text-2xl tracking-tight">
+                <h3 className="font-bold text-white text-base sm:text-lg tracking-tight">
                   Traslado #{selectedDetailTransfer.id}
                 </h3>
                 {selectedDetailTransfer.status === 'en_transito' ? (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
-                    <Clock className="w-3.5 h-3.5" />
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                    <Clock className="w-3 h-3" />
                     <span>En Tránsito</span>
                   </span>
                 ) : (
-                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+                    <CheckCircle2 className="w-3 h-3" />
                     <span>Completado</span>
                   </span>
                 )}
               </div>
-              <div className="text-xs text-slate-400 flex flex-wrap gap-5 font-mono pt-0.5">
+              <div className="text-[11px] text-slate-400 flex flex-wrap gap-4 font-mono">
                 <span>
-                  <strong className="text-slate-300">Fecha de Creación:</strong>{' '}
+                  <strong className="text-slate-300 font-sans">Creación:</strong>{' '}
                   {new Date(selectedDetailTransfer.created_at).toLocaleString('es-GT', {
                     dateStyle: 'medium',
                     timeStyle: 'short'
@@ -2159,7 +2159,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                 </span>
                 {selectedDetailTransfer.received_at && (
                   <span>
-                    <strong className="text-emerald-400">Fecha de Recepción:</strong>{' '}
+                    <strong className="text-emerald-400 font-sans">Recepción:</strong>{' '}
                     {new Date(selectedDetailTransfer.received_at).toLocaleString('es-GT', {
                       dateStyle: 'medium',
                       timeStyle: 'short'
@@ -2172,47 +2172,47 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
             <button
               type="button"
               onClick={() => setSelectedDetailTransfer(null)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition cursor-pointer"
               title="Volver al Inventario (Esc)"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 text-slate-400" />
               <span>Volver al Inventario</span>
             </button>
           </div>
 
           {/* 2. Cuerpo central scrolleable */}
-          <div className="flex-1 w-full px-8 py-8 overflow-y-auto space-y-6">
-            <div className="max-w-7xl mx-auto space-y-6">
+          <div className="flex-1 w-full px-6 py-4 overflow-y-auto space-y-3.5">
+            <div className="max-w-7xl mx-auto space-y-3.5">
               
-              {/* Ruta de Traslado: Tarjetas amplias de origen y destino con la flecha central */}
-              <div className="bg-slate-900/70 border border-slate-800/90 p-6 rounded-2xl space-y-4 shadow-inner">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-                  <Building2 className="w-4 h-4" />
-                  Ruta de Traslado entre Sucursales
+              {/* Ruta de Traslado: Tarjetas de origen y destino compactas con flecha central w-7 h-7 */}
+              <div className="bg-slate-900/70 border border-slate-800/90 p-3.5 sm:p-4 rounded-xl space-y-2.5 shadow-inner">
+                <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                  <Building2 className="w-4 h-4 text-slate-400" />
+                  <span>Ruta de Traslado entre Sucursales</span>
                 </span>
-                <div className="grid grid-cols-1 md:grid-cols-11 gap-4 items-center bg-slate-950/70 border border-slate-800 p-5 rounded-xl">
+                <div className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center bg-slate-950/70 border border-slate-800 p-3 rounded-lg">
                   {/* Origen */}
-                  <div className="md:col-span-5 text-center sm:text-left space-y-1.5 p-4 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Origen (Salida de Stock)</span>
-                    <div className="font-extrabold text-base sm:text-lg text-slate-100 flex items-center gap-2.5">
-                      <Building2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                  <div className="md:col-span-5 text-center sm:text-left space-y-1 p-3.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Origen (Salida de Stock)</span>
+                    <div className="font-bold text-sm sm:text-base text-slate-100 flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-emerald-400 shrink-0" />
                       <span>{selectedDetailTransfer.from_store_name || getStoreName(selectedDetailTransfer.from_store_id)}</span>
                     </div>
                   </div>
 
-                  {/* Flecha indicadora central */}
-                  <div className="md:col-span-1 flex flex-col items-center justify-center py-2">
-                    <div className="p-3 bg-indigo-600/20 text-indigo-400 rounded-full border border-indigo-500/30 shadow-lg shadow-indigo-600/10">
-                      <ArrowRight className="w-5 h-5" />
+                  {/* Flecha indicadora central w-7 h-7 */}
+                  <div className="md:col-span-1 flex flex-col items-center justify-center py-1">
+                    <div className="w-7 h-7 bg-indigo-600/20 text-indigo-400 rounded-full border border-indigo-500/30 flex items-center justify-center shadow-md">
+                      <ArrowRight className="w-3.5 h-3.5" />
                     </div>
-                    <span className="text-[10px] text-indigo-400 font-mono mt-1 font-bold">Traslado</span>
+                    <span className="text-[9px] text-indigo-400 font-mono mt-0.5 font-bold uppercase">Traslado</span>
                   </div>
 
                   {/* Destino */}
-                  <div className="md:col-span-5 text-center sm:text-left space-y-1.5 p-4 rounded-xl bg-slate-900 border border-slate-800">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Destino (Entrada de Stock)</span>
-                    <div className="font-extrabold text-base sm:text-lg text-slate-100 flex items-center gap-2.5">
-                      <Building2 className="w-5 h-5 text-indigo-400 shrink-0" />
+                  <div className="md:col-span-5 text-center sm:text-left space-y-1 p-3.5 rounded-lg bg-slate-900 border border-slate-800">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Destino (Entrada de Stock)</span>
+                    <div className="font-bold text-sm sm:text-base text-slate-100 flex items-center gap-2">
+                      <Building2 className="w-4 h-4 text-indigo-400 shrink-0" />
                       <span>{selectedDetailTransfer.to_store_name || getStoreName(selectedDetailTransfer.to_store_id)}</span>
                     </div>
                   </div>
@@ -2220,44 +2220,44 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
               </div>
 
               {/* Tabla de Productos Trasladados a todo el ancho */}
-              <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl overflow-hidden shadow-inner">
-                <div className="p-5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
-                  <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-                    <Boxes className="w-4 h-4" />
-                    Productos y Cantidades Trasladadas
+              <div className="bg-slate-900/70 border border-slate-800/90 rounded-xl overflow-hidden shadow-inner">
+                <div className="p-3.5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-slate-400 flex items-center gap-2">
+                    <Boxes className="w-4 h-4 text-slate-400" />
+                    <span>Productos y Cantidades Trasladadas</span>
                   </span>
-                  <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3.5 py-1 rounded-full border border-emerald-500/20 font-mono">
-                    Total de Unidades: {selectedDetailTransfer.items?.reduce((sum, item) => sum + item.quantity, 0) || 0} piezas
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-0.5 rounded-full border border-emerald-500/20 font-mono">
+                    Total: {selectedDetailTransfer.items?.reduce((sum, item) => sum + item.quantity, 0) || 0} piezas
                   </span>
                 </div>
 
                 <div className="overflow-x-auto w-full">
-                  <table className="w-full text-left text-xs sm:text-sm">
-                    <thead className="bg-slate-950/80 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 text-xs">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-950/80 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 text-[11px]">
                       <tr>
-                        <th className="py-3.5 px-6 w-48">Código SKU</th>
-                        <th className="py-3.5 px-6">Descripción del Producto</th>
-                        <th className="py-3.5 px-6 text-right w-56">Cantidad Trasladada</th>
+                        <th className="py-2.5 px-4 w-44">Código SKU</th>
+                        <th className="py-2.5 px-4">Descripción del Producto</th>
+                        <th className="py-2.5 px-4 text-right w-48">Cantidad Trasladada</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/70 text-slate-200">
                       {selectedDetailTransfer.items && selectedDetailTransfer.items.length > 0 ? (
                         selectedDetailTransfer.items.map((item, idx) => (
                           <tr key={idx} className="hover:bg-slate-900/50 transition-colors">
-                            <td className="py-4 px-6 font-mono font-bold text-indigo-400">
+                            <td className="py-2.5 px-4 font-mono font-bold text-indigo-400">
                               {item.sku || `PROD-${item.product_id}`}
                             </td>
-                            <td className="py-4 px-6 font-semibold text-white">
+                            <td className="py-2.5 px-4 font-semibold text-white">
                               {item.product_name || `Producto #${item.product_id}`}
                             </td>
-                            <td className="py-4 px-6 text-right font-mono font-extrabold text-emerald-400 text-base">
-                              {item.quantity} <span className="text-xs text-slate-400 font-normal">uds</span>
+                            <td className="py-2.5 px-4 text-right font-mono font-extrabold text-emerald-400 text-sm">
+                              {item.quantity} <span className="text-[11px] text-slate-400 font-normal">uds</span>
                             </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan={3} className="py-8 text-center text-slate-500">
+                          <td colSpan={3} className="py-6 text-center text-slate-500">
                             No hay items asociados a este traslado.
                           </td>
                         </tr>
@@ -2268,11 +2268,11 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
               </div>
 
               {/* Notas / Observaciones */}
-              <div className="bg-slate-900/70 border border-slate-800/90 p-5 sm:p-6 rounded-2xl space-y-2 shadow-inner">
-                <span className="text-xs font-bold text-slate-400 uppercase block tracking-wider">
+              <div className="bg-slate-900/70 border border-slate-800/90 p-3.5 sm:p-4 rounded-xl space-y-1.5 shadow-inner">
+                <span className="text-xs font-semibold text-slate-400 uppercase block tracking-wider">
                   Notas / Observaciones del Envío:
                 </span>
-                <p className="text-xs sm:text-sm text-slate-200 font-mono italic leading-relaxed">
+                <p className="text-xs text-slate-200 font-mono italic leading-relaxed">
                   {selectedDetailTransfer.notes && selectedDetailTransfer.notes.trim() !== ''
                     ? `"${selectedDetailTransfer.notes}"`
                     : 'Sin notas adicionales para este traslado.'}
@@ -2283,7 +2283,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
           </div>
 
           {/* 3. Footer fijo inferior */}
-          <div className="w-full px-8 py-4 border-t border-slate-800 bg-slate-900/95 flex justify-end items-center gap-4 shrink-0">
+          <div className="w-full px-6 py-3 border-t border-slate-800 bg-slate-900/95 flex justify-end items-center gap-3 shrink-0">
             {selectedDetailTransfer.status === 'en_transito' ? (
               <button
                 type="button"
@@ -2293,13 +2293,13 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                   handleReceiveTransfer(id);
                 }}
                 disabled={receivingId === selectedDetailTransfer.id}
-                className="h-10 px-6 inline-flex items-center gap-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+                className="h-9 px-5 inline-flex items-center gap-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-md shadow-emerald-600/20 disabled:opacity-50"
               >
                 <CheckCircle2 className="w-4 h-4" />
                 <span>Confirmar Recepción de Traslado</span>
               </button>
             ) : (
-              <span className="text-xs text-emerald-400 font-semibold flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl font-mono">
+              <span className="text-xs text-emerald-400 font-semibold flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1.5 rounded-lg font-mono">
                 <CheckCircle2 className="w-4 h-4" />
                 Traslado Completado y Recibido en Destino
               </span>
@@ -2308,7 +2308,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
             <button
               type="button"
               onClick={() => setSelectedDetailTransfer(null)}
-              className="h-10 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition cursor-pointer"
+              className="h-9 px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-lg transition cursor-pointer"
             >
               Cerrar
             </button>
