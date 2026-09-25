@@ -864,114 +864,143 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
 
       {/* Detalle de Existencias Multitienda Modal */}
       {selectedDetailProduct && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-5 animate-in fade-in duration-200">
-            {/* Header without photo */}
-            <div className="flex items-start justify-between border-b border-slate-800 pb-3.5">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded border border-indigo-500/20">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-3 sm:p-6">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in duration-200">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded border border-indigo-500/20">
                     {selectedDetailProduct.sku}
                   </span>
-                  <span className="text-xs font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
+                  <span className="text-xs font-semibold text-slate-400 bg-slate-800 px-2.5 py-1 rounded border border-slate-700">
                     {selectedDetailProduct.category || 'General'}
                   </span>
                 </div>
-                <h2 className="text-lg font-bold text-white tracking-tight">{selectedDetailProduct.name}</h2>
+                <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight">{selectedDetailProduct.name}</h2>
               </div>
-              <button onClick={() => setSelectedDetailProduct(null)} className="text-slate-400 hover:text-white p-1 text-lg font-bold cursor-pointer">✕</button>
+              <button onClick={() => setSelectedDetailProduct(null)} className="text-slate-400 hover:text-white p-1 text-xl font-bold cursor-pointer transition-colors">✕</button>
             </div>
 
-            {/* Main Section: Desglose de existencias físicas por sucursal */}
-            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-              {(() => {
-                const s1 = selectedDetailMatrix?.stock_tienda_1 ?? 0;
-                const s2 = selectedDetailMatrix?.stock_tienda_2 ?? 0;
-                const s3 = selectedDetailMatrix?.stock_tienda_3 ?? 0;
-                const physicalTotal = s1 + s2 + s3;
-                const transitTotal = selectedDetailMatrix?.stock_transito ?? 0;
-                const grandTotal = selectedDetailMatrix?.stock_total ?? (physicalTotal + transitTotal);
+            {/* Grid 2 Columnas Anchas: Stock Multitienda a la izquierda, Comercial y Precios a la derecha */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Columna Izquierda: Existencias Multitienda (7 cols) */}
+              <div className="lg:col-span-7 bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-inner">
+                {(() => {
+                  const s1 = selectedDetailMatrix?.stock_tienda_1 ?? 0;
+                  const s2 = selectedDetailMatrix?.stock_tienda_2 ?? 0;
+                  const s3 = selectedDetailMatrix?.stock_tienda_3 ?? 0;
+                  const physicalTotal = s1 + s2 + s3;
+                  const transitTotal = selectedDetailMatrix?.stock_transito ?? 0;
+                  const grandTotal = selectedDetailMatrix?.stock_total ?? (physicalTotal + transitTotal);
 
-                return (
-                  <>
-                    <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                      <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                        <Building2 className="w-4 h-4" />
-                        Detalle de Existencias Multitienda
-                      </span>
-                      <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20">
-                        Total Consolidado: {grandTotal} uds (Físico: {physicalTotal} | En camino: {transitTotal})
-                      </span>
-                    </div>
-
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                      {storesList.map(s => {
-                        let qty = 0;
-                        if (s.id === 'tienda_1') qty = s1;
-                        else if (s.id === 'tienda_2') qty = s2;
-                        else if (s.id === 'tienda_3') qty = s3;
-
-                        return (
-                          <div key={s.id} className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-center space-y-0.5">
-                            <span className="text-[10px] font-semibold text-slate-400 block truncate">{s.name}</span>
-                            <span className={`text-lg font-black font-mono block ${qty > 0 ? 'text-white' : 'text-slate-600'}`}>
-                              {qty}
-                            </span>
-                            <span className="text-[9px] text-slate-500 block">unidades</span>
-                          </div>
-                        );
-                      })}
-
-                      {/* 4ta caja: En Tránsito */}
-                      <div className="bg-amber-950/20 border border-amber-500/30 p-2.5 rounded-xl text-center space-y-0.5">
-                        <span className="text-[10px] font-semibold text-amber-400 block truncate">En Tránsito</span>
-                        <span className={`text-lg font-black font-mono block ${transitTotal > 0 ? 'text-amber-400' : 'text-slate-600'}`}>
-                          {transitTotal}
+                  return (
+                    <>
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-800 pb-3 gap-2">
+                        <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-2">
+                          <Building2 className="w-4 h-4" />
+                          Existencias Físicas Multitienda
                         </span>
-                        <span className="text-[9px] text-amber-500/70 block">en camino</span>
+                        <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 font-mono">
+                          Total: {grandTotal} uds (Físico: {physicalTotal} | En camino: {transitTotal})
+                        </span>
                       </div>
-                    </div>
 
-                    {/* Desglose de envíos en camino si existen */}
-                    {selectedDetailMatrix?.transits && selectedDetailMatrix.transits.length > 0 && (
-                      <div className="bg-amber-950/30 border border-amber-500/20 p-2.5 rounded-xl space-y-1 text-xs mt-2">
-                        <span className="text-[11px] font-bold text-amber-300 block flex items-center gap-1">
-                          🚚 Envíos activos en movimiento:
-                        </span>
-                        {selectedDetailMatrix.transits.map((t: any, idx: number) => {
-                          const fromName = t.from_store_name || t.from_store_id;
-                          const toName = t.to_store_name || t.to_store_id;
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                        {storesList.map(s => {
+                          let qty = 0;
+                          if (s.id === 'tienda_1') qty = s1;
+                          else if (s.id === 'tienda_2') qty = s2;
+                          else if (s.id === 'tienda_3') qty = s3;
+
                           return (
-                            <div key={idx} className="text-[11px] text-amber-200/90 font-mono flex items-center justify-between">
-                              <span>De {fromName} a {toName}:</span>
-                              <span className="font-bold">{t.quantity} unidades</span>
+                            <div key={s.id} className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl text-center space-y-1">
+                              <span className="text-xs font-semibold text-slate-400 block truncate">{s.name}</span>
+                              <span className={`text-2xl font-black font-mono block ${qty > 0 ? 'text-white' : 'text-slate-600'}`}>
+                                {qty}
+                              </span>
+                              <span className="text-[10px] text-slate-500 block uppercase">unidades</span>
                             </div>
                           );
                         })}
+
+                        {/* Caja: En Tránsito */}
+                        <div className="bg-amber-950/20 border border-amber-500/30 p-3.5 rounded-xl text-center space-y-1">
+                          <span className="text-xs font-semibold text-amber-400 block truncate">En Tránsito</span>
+                          <span className={`text-2xl font-black font-mono block ${transitTotal > 0 ? 'text-amber-400' : 'text-slate-600'}`}>
+                            {transitTotal}
+                          </span>
+                          <span className="text-[10px] text-amber-500/70 block uppercase">en camino</span>
+                        </div>
                       </div>
-                    )}
-                  </>
-                );
-              })()}
+
+                      {/* Desglose de envíos en camino si existen */}
+                      {selectedDetailMatrix?.transits && selectedDetailMatrix.transits.length > 0 && (
+                        <div className="bg-amber-950/30 border border-amber-500/20 p-3.5 rounded-xl space-y-2 text-xs mt-3">
+                          <span className="text-xs font-bold text-amber-300 block flex items-center gap-1.5">
+                            🚚 Envíos activos en movimiento:
+                          </span>
+                          <div className="space-y-1.5">
+                            {selectedDetailMatrix.transits.map((t: any, idx: number) => {
+                              const fromName = t.from_store_name || t.from_store_id;
+                              const toName = t.to_store_name || t.to_store_id;
+                              return (
+                                <div key={idx} className="text-xs text-amber-200/90 font-mono flex items-center justify-between bg-amber-950/40 px-3 py-1.5 rounded-lg border border-amber-500/10">
+                                  <span>De {fromName} a {toName}:</span>
+                                  <span className="font-bold">{t.quantity} unidades</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Columna Derecha: Datos Comerciales y Precios (5 cols) */}
+              <div className="lg:col-span-5 bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-inner">
+                <span className="font-extrabold text-slate-300 text-xs uppercase tracking-wider block border-b border-slate-800 pb-3">
+                  Información Comercial y Precios
+                </span>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
+                  <div className="bg-slate-900 border border-slate-800 p-4 rounded-xl space-y-1">
+                    <span className="text-xs font-semibold text-slate-400 block uppercase">Precio de Costo (Q)</span>
+                    <span className="text-xl font-black font-mono text-slate-100 block">
+                      Q {selectedDetailProduct.unitCost.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                  <div className="bg-emerald-950/20 border border-emerald-500/20 p-4 rounded-xl space-y-1">
+                    <span className="text-xs font-semibold text-emerald-400 block uppercase">Precio de Venta (Q)</span>
+                    <span className="text-xl font-black font-mono text-emerald-400 block">
+                      Q {(selectedDetailProduct.sale_price && selectedDetailProduct.sale_price > 0 ? selectedDetailProduct.sale_price : selectedDetailProduct.unitCost * 1.15).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl text-xs space-y-2">
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span>Margen Estimado Unitario:</span>
+                    <span className="font-bold text-emerald-400 font-mono">
+                      Q {Math.max(0, (selectedDetailProduct.sale_price || selectedDetailProduct.unitCost * 1.15) - selectedDetailProduct.unitCost).toFixed(2)}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-slate-400">
+                    <span>Margen Porcentual:</span>
+                    <span className="font-bold text-emerald-400 font-mono">
+                      {selectedDetailProduct.unitCost > 0
+                        ? `${(((Math.max(0, (selectedDetailProduct.sale_price || selectedDetailProduct.unitCost * 1.15) - selectedDetailProduct.unitCost)) / selectedDetailProduct.unitCost) * 100).toFixed(1)}%`
+                        : '0%'}
+                    </span>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            {/* Datos Comerciales Simples */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-slate-950 border border-slate-800 p-3.5 rounded-xl space-y-1">
-                <span className="text-xs font-semibold text-slate-400 block uppercase">Precio de Costo (Q)</span>
-                <span className="text-lg font-extrabold font-mono text-slate-100 block">
-                  Q {selectedDetailProduct.unitCost.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-              <div className="bg-emerald-950/20 border border-emerald-500/20 p-3.5 rounded-xl space-y-1">
-                <span className="text-xs font-semibold text-emerald-400 block uppercase">Precio de Venta (Q)</span>
-                <span className="text-lg font-black font-mono text-emerald-400 block">
-                  Q {(selectedDetailProduct.sale_price && selectedDetailProduct.sale_price > 0 ? selectedDetailProduct.sale_price : selectedDetailProduct.unitCost * 1.15).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </span>
-              </div>
-            </div>
-
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+            {/* Footer */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-800">
               <button
                 onClick={() => {
                   const prod = selectedDetailProduct;
@@ -980,15 +1009,15 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
                   setEntryStoreId(storesList[0]?.id || 'tienda_1');
                   setEntryQty(1);
                 }}
-                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 cursor-pointer shadow"
+                className="px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold rounded-xl transition flex items-center gap-2 cursor-pointer shadow-lg shadow-emerald-600/20"
               >
                 <Plus className="w-4 h-4" />
-                <span>+ Cargar Entrada</span>
+                <span>+ Cargar Entrada de Stock</span>
               </button>
 
               <button
                 onClick={() => setSelectedDetailProduct(null)}
-                className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
+                className="px-6 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
               >
                 Cerrar
               </button>
@@ -997,32 +1026,30 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
         </div>
       )}
 
-
-
       {/* Modal Add New Product / SKU directly */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black/75 backdrop-blur-md z-[100000] flex items-center justify-center p-3 sm:p-4">
-          <div className="bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-md max-h-[92vh] flex flex-col p-4 sm:p-6 shadow-2xl overflow-hidden space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-700 pb-3 shrink-0">
-              <div className="flex items-center space-x-2">
-                <h3 className="font-bold text-white text-base">Registrar Nuevo Producto / SKU</h3>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100000] flex items-center justify-center p-3 sm:p-6">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in duration-200">
+            <div className="flex justify-between items-center border-b border-slate-800 pb-4 shrink-0">
+              <div className="flex items-center space-x-3">
+                <h3 className="font-black text-white text-lg sm:text-xl tracking-tight">Registrar Nuevo Producto / SKU</h3>
                 {(name.trim() !== '' || sku.trim() !== '') && (
-                  <span className="text-[10px] font-semibold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                  <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20">
                     📝 Borrador autoguardado
                   </span>
                 )}
               </div>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-white text-base font-bold">✕</button>
+              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-white text-lg font-bold transition-colors">✕</button>
             </div>
 
             {errorMessage && (
-              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs p-3 rounded-lg font-medium shrink-0">
+              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs p-3.5 rounded-xl font-medium shrink-0">
                 {errorMessage}
               </div>
             )}
 
             {invNetworkError && (
-              <div className="p-3 bg-rose-500/15 border border-rose-500/40 rounded-xl text-rose-300 text-xs flex flex-col sm:flex-row items-center justify-between gap-2.5 animate-in fade-in shrink-0">
+              <div className="p-3.5 bg-rose-500/15 border border-rose-500/40 rounded-xl text-rose-300 text-xs flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in shrink-0">
                 <div className="flex items-center space-x-2">
                   <AlertCircle className="w-5 h-5 shrink-0 text-rose-400" />
                   <span className="font-semibold">{invNetworkError}</span>
@@ -1031,122 +1058,137 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
                   type="button"
                   onClick={() => handleCreateProduct()}
                   disabled={isSavingProduct}
-                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs transition shadow shrink-0 cursor-pointer flex items-center space-x-1"
+                  className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs transition shadow shrink-0 cursor-pointer flex items-center space-x-1"
                 >
                   <span>{isSavingProduct ? 'Guardando...' : '🔄 Reintentar Guardar'}</span>
                 </button>
               </div>
             )}
 
-            <form onSubmit={handleCreateProduct} className="space-y-4 text-xs overflow-y-auto max-h-[calc(90vh-100px)] pr-1 pb-1">
-              <div>
-                <label className="block text-slate-400 font-semibold uppercase mb-1">Código SKU Único *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. PROD-005"
-                  value={sku}
-                  onChange={(e) => setSku(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold uppercase mb-1">Nombre del Producto *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. Audífonos Bluetooth Pro / Smartphone"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Fila de 3 columnas uniformes: Categoría, Precio de Costo, Precio de Venta */}
-              <div className="grid grid-cols-3 gap-3 items-start">
-                <div>
-                  <label className="block text-slate-400 font-semibold uppercase mb-1 truncate">Categoría</label>
-                  <input
-                    type="text"
-                    placeholder="General"
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-lg text-white focus:border-indigo-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 font-semibold uppercase mb-1 truncate">PRECIO DE COSTO (Q) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={unitCost}
-                    onChange={(e) => setUnitCost(e.target.value)}
-                    className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono focus:border-indigo-500 focus:outline-none"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-400 font-semibold uppercase mb-1 truncate">PRECIO DE VENTA (Q) *</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={salePrice}
-                    onChange={(e) => setSalePrice(e.target.value)}
-                    className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono focus:border-indigo-500 focus:outline-none"
-                  />
-                </div>
-              </div>
-
-              {/* CONTENEDOR DESTACADO: DISTRIBUCIÓN INICIAL DE STOCK */}
-              <div className="bg-slate-900 border border-slate-700/80 p-3.5 rounded-xl space-y-3 shadow-inner">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4" />
-                    DISTRIBUCIÓN INICIAL DE STOCK
+            <form onSubmit={handleCreateProduct} className="space-y-6 text-xs">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* Columna Izquierda: Información del Producto y Precios (7 cols) */}
+                <div className="lg:col-span-7 bg-slate-950/60 border border-slate-800 rounded-2xl p-5 space-y-4">
+                  <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider block border-b border-slate-800 pb-2">
+                    Información General y Comercial
                   </span>
-                  <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                    Stock Total Inicial: {totalInitialStock} unidades
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-3 gap-3 items-end">
-                  {storesList.map(store => (
-                    <div key={store.id} className="space-y-1">
-                      <label className="text-[11px] font-semibold text-slate-300 block truncate">
-                        {store.name}
-                      </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-400 font-semibold uppercase mb-1">Código SKU Único *</label>
                       <input
-                        type="number"
-                        min="0"
-                        value={initialStocks[store.id] ?? 0}
-                        onChange={e => setInitialStocks({
-                          ...initialStocks,
-                          [store.id]: Math.max(0, parseInt(e.target.value, 10) || 0)
-                        })}
-                        className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono text-xs focus:border-indigo-500 focus:outline-none"
+                        type="text"
+                        required
+                        placeholder="Ej. PROD-005"
+                        value={sku}
+                        onChange={(e) => setSku(e.target.value)}
+                        className="w-full h-10 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-indigo-500 focus:outline-none"
                       />
                     </div>
-                  ))}
+
+                    <div>
+                      <label className="block text-slate-400 font-semibold uppercase mb-1 truncate">Categoría</label>
+                      <input
+                        type="text"
+                        placeholder="General"
+                        value={category}
+                        onChange={(e) => setCategory(e.target.value)}
+                        className="w-full h-10 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-400 font-semibold uppercase mb-1">Nombre del Producto *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. Audífonos Bluetooth Pro / Smartphone"
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      className="w-full h-10 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                    <div>
+                      <label className="block text-slate-400 font-semibold uppercase mb-1 truncate">PRECIO DE COSTO (Q) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        required
+                        value={unitCost}
+                        onChange={(e) => setUnitCost(e.target.value)}
+                        className="w-full h-10 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-slate-400 font-semibold uppercase mb-1 truncate">PRECIO DE VENTA (Q) *</label>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        required
+                        value={salePrice}
+                        onChange={(e) => setSalePrice(e.target.value)}
+                        className="w-full h-10 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Columna Derecha: Distribución Inicial de Stock (5 cols) */}
+                <div className="lg:col-span-5 bg-slate-950/60 border border-slate-700/80 p-5 rounded-2xl space-y-4 shadow-inner">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
+                    <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                      <Building2 className="w-4 h-4" />
+                      DISTRIBUCIÓN INICIAL DE STOCK
+                    </span>
+                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 font-mono">
+                      Total: {totalInitialStock} uds
+                    </span>
+                  </div>
+
+                  <p className="text-slate-400 text-xs leading-relaxed">
+                    Asigna las existencias físicas iniciales con las que se dará de alta este producto en cada tienda:
+                  </p>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
+                    {storesList.map(store => (
+                      <div key={store.id} className="bg-slate-900/90 border border-slate-800 p-3 rounded-xl flex items-center justify-between gap-3">
+                        <label className="text-xs font-semibold text-slate-300 block truncate">
+                          {store.name}
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={initialStocks[store.id] ?? 0}
+                          onChange={e => setInitialStocks({
+                            ...initialStocks,
+                            [store.id]: Math.max(0, parseInt(e.target.value, 10) || 0)
+                          })}
+                          className="w-24 h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono text-xs text-right focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Botones inferiores con padding adecuado para evitar recortes */}
+              {/* Botones inferiores */}
               <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="h-10 px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition cursor-pointer"
+                  className="h-10 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingProduct}
-                  className="h-10 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+                  className="h-10 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
                 >
                   {isSavingProduct ? 'Guardando...' : 'Guardar Producto'}
                 </button>

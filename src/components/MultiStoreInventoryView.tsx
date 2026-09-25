@@ -16,7 +16,8 @@ import {
   Package,
   Pencil,
   Check,
-  DollarSign
+  DollarSign,
+  AlertCircle
 } from 'lucide-react';
 import {
   fetchStoresApi,
@@ -810,185 +811,227 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       {/* MODAL 1: NUEVO PRODUCTO CON DISTRIBUCIÓN INICIAL */}
       {showAddProductModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-4 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-base flex items-center gap-2">
-                <Package className="w-5 h-5 text-indigo-400" />
-                Registrar Nuevo Producto / SKU
-              </h3>
-              <button onClick={() => setShowAddProductModal(false)} className="text-slate-400 hover:text-white p-1 cursor-pointer">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="font-extrabold text-white text-lg sm:text-xl flex items-center gap-2.5">
+                  <Package className="w-6 h-6 text-indigo-400" />
+                  Registrar Nuevo Producto / SKU
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Crea el producto en el catálogo maestro y asigna existencias iniciales por sucursal</p>
+              </div>
+              <button
+                onClick={() => setShowAddProductModal(false)}
+                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+                title="Cerrar modal"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateProductSubmit} className="space-y-4 text-xs">
-              <div>
-                <label className="block text-slate-400 font-semibold uppercase mb-1">Código SKU Único *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. PROD-005"
-                  value={newSku}
-                  onChange={(e) => setNewSku(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-slate-400 font-semibold uppercase mb-1">Nombre del Producto *</label>
-                <input
-                  type="text"
-                  required
-                  placeholder="Ej. Audífonos Bluetooth Pro / Smartphone"
-                  value={newName}
-                  onChange={(e) => setNewName(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Campo Categoría en su propia fila */}
-              <div className="space-y-1 mb-4">
-                <label className="block text-xs font-semibold text-slate-400 mb-1.5">CATEGORÍA</label>
-                <input
-                  type="text"
-                  placeholder="General (ej. Electrónica, Accesorios...)"
-                  value={newCategory}
-                  onChange={(e) => setNewCategory(e.target.value)}
-                  className="h-10 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-white focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Fila exclusiva de Precios (Grid 2 columnas niveladas) */}
-              <div className="grid grid-cols-2 gap-4 mb-4 items-start">
-                {/* Columna 1 (Costo) */}
-                <div>
-                  <div className="flex items-center justify-between h-6 mb-1.5">
-                    <label className="text-xs font-semibold text-slate-400">PRECIO COSTO (Q) *</label>
+            <form onSubmit={handleCreateProductSubmit} className="space-y-6 text-xs">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Columna Izquierda: Información General y Precios */}
+                <div className="lg:col-span-6 space-y-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5">
+                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-800/80">
+                    <Package className="w-4 h-4" />
+                    <span>1. Información General y Catálogo</span>
                   </div>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    required
-                    value={newUnitCost}
-                    onChange={(e) => setNewUnitCost(e.target.value)}
-                    className="h-10 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-white font-mono focus:border-indigo-500 focus:outline-none"
-                  />
-                  <div className="h-4 mt-1"></div>
-                </div>
 
-                {/* Columna 2 (Venta) */}
-                <div>
-                  <div className="flex items-center justify-between h-6 mb-1.5">
-                    <label className="text-xs font-semibold text-emerald-400">
-                      {pricingMode === 'fixed' ? 'PRECIO VENTA (Q) *' : 'MARGEN (%) *'}
-                    </label>
-                    {/* Switch compacto a la par del label */}
-                    <div className="inline-flex bg-slate-900 p-0.5 rounded border border-slate-700 text-[10px]">
-                      <button
-                        type="button"
-                        onClick={() => setPricingMode('fixed')}
-                        className={`px-1.5 py-0.5 rounded cursor-pointer transition ${
-                          pricingMode === 'fixed'
-                            ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        Fijo (Q)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setPricingMode('margin')}
-                        className={`px-1.5 py-0.5 rounded cursor-pointer transition ${
-                          pricingMode === 'margin'
-                            ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        Margen (%)
-                      </button>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Código SKU Único *</label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="Ej. PROD-005"
+                        value={newSku}
+                        onChange={(e) => setNewSku(e.target.value)}
+                        className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-indigo-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Categoría</label>
+                      <input
+                        type="text"
+                        placeholder="General (ej. Electrónica)"
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                        className="h-10 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
+                      />
                     </div>
                   </div>
 
-                  {pricingMode === 'fixed' ? (
-                    <>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        required
-                        value={newSalePrice}
-                        onChange={(e) => setNewSalePrice(e.target.value)}
-                        className="h-10 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none"
-                      />
-                      {(() => {
-                        const cost = parseFloat(newUnitCost) || 0;
-                        const sale = parseFloat(newSalePrice) || 0;
-                        const profit = sale - cost;
-                        const pct = cost > 0 ? (profit / cost) * 100 : 0;
-                        return (
-                          <div className="h-4 mt-1 text-[11px] text-slate-400 font-mono truncate">
-                            Ganancia: Q {profit.toFixed(2)} ({pct.toFixed(1)}%)
-                          </div>
-                        );
-                      })()}
-                    </>
-                  ) : (
-                    <>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        required
-                        value={marginPercent}
-                        onChange={(e) => setMarginPercent(e.target.value)}
-                        className="h-10 w-full rounded-lg bg-slate-950 border border-emerald-500/40 px-3 text-sm text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none"
-                      />
-                      {(() => {
-                        const cost = parseFloat(newUnitCost) || 0;
-                        const margin = parseFloat(marginPercent) || 0;
-                        const calcSale = cost * (1 + margin / 100);
-                        return (
-                          <div className="h-4 mt-1 text-[11px] text-emerald-400 font-mono font-semibold truncate">
-                            Precio resultante: Q {calcSale.toFixed(2)}
-                          </div>
-                        );
-                      })()}
-                    </>
-                  )}
-                </div>
-              </div>
+                  <div>
+                    <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Nombre del Producto *</label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="Ej. Audífonos Bluetooth Pro / Smartphone 128GB"
+                      value={newName}
+                      onChange={(e) => setNewName(e.target.value)}
+                      className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs"
+                    />
+                  </div>
 
-              {/* CONTENEDOR DESTACADO: DISTRIBUCIÓN INICIAL DE STOCK */}
-              <div className="bg-slate-950 border border-slate-800 p-3.5 rounded-xl space-y-3 shadow-inner">
-                <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                  <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                    <Building2 className="w-4 h-4" />
-                    DISTRIBUCIÓN INICIAL DE STOCK
-                  </span>
-                  <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20">
-                    Stock Total Inicial: {totalInitialStockInModal} unidades
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-3 gap-3 items-end">
-                  {stores.map(store => (
-                    <div key={store.id} className="space-y-1">
-                      <label className="text-[11px] font-semibold text-slate-300 block truncate">
-                        {store.name}
-                      </label>
-                      <input
-                        type="number"
-                        min="0"
-                        value={newInitialStocks[store.id] ?? 0}
-                        onChange={e => setNewInitialStocks({
-                          ...newInitialStocks,
-                          [store.id]: Math.max(0, parseInt(e.target.value, 10) || 0)
-                        })}
-                        className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-lg text-white font-mono text-xs focus:border-indigo-500 focus:outline-none"
-                      />
+                  <div className="pt-2">
+                    <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-2 mb-3 border-b border-slate-800/80">
+                      <DollarSign className="w-4 h-4" />
+                      <span>2. Precios Comerciales (Q)</span>
                     </div>
-                  ))}
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
+                      {/* Columna 1 (Costo) */}
+                      <div>
+                        <div className="flex items-center justify-between h-6 mb-1.5">
+                          <label className="text-xs font-semibold text-slate-400 uppercase">Precio Costo (Q) *</label>
+                        </div>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          required
+                          value={newUnitCost}
+                          onChange={(e) => setNewUnitCost(e.target.value)}
+                          className="h-10 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-white font-mono focus:border-indigo-500 focus:outline-none"
+                        />
+                        <div className="h-4 mt-1"></div>
+                      </div>
+
+                      {/* Columna 2 (Venta) */}
+                      <div>
+                        <div className="flex items-center justify-between h-6 mb-1.5">
+                          <label className="text-xs font-semibold text-emerald-400 uppercase">
+                            {pricingMode === 'fixed' ? 'Precio Venta (Q) *' : 'Margen (%) *'}
+                          </label>
+                          <div className="inline-flex bg-slate-900 p-0.5 rounded border border-slate-700 text-[10px]">
+                            <button
+                              type="button"
+                              onClick={() => setPricingMode('fixed')}
+                              className={`px-1.5 py-0.5 rounded cursor-pointer transition ${
+                                pricingMode === 'fixed'
+                                  ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                                  : 'text-slate-400 hover:text-slate-200'
+                              }`}
+                            >
+                              Fijo (Q)
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setPricingMode('margin')}
+                              className={`px-1.5 py-0.5 rounded cursor-pointer transition ${
+                                pricingMode === 'margin'
+                                  ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                                  : 'text-slate-400 hover:text-slate-200'
+                              }`}
+                            >
+                              Margen (%)
+                            </button>
+                          </div>
+                        </div>
+
+                        {pricingMode === 'fixed' ? (
+                          <>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              required
+                              value={newSalePrice}
+                              onChange={(e) => setNewSalePrice(e.target.value)}
+                              className="h-10 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none"
+                            />
+                            {(() => {
+                              const cost = parseFloat(newUnitCost) || 0;
+                              const sale = parseFloat(newSalePrice) || 0;
+                              const profit = sale - cost;
+                              const pct = cost > 0 ? (profit / cost) * 100 : 0;
+                              return (
+                                <div className="h-4 mt-1 text-[11px] text-slate-400 font-mono truncate">
+                                  Ganancia: Q {profit.toFixed(2)} ({pct.toFixed(1)}%)
+                                </div>
+                              );
+                            })()}
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              required
+                              value={marginPercent}
+                              onChange={(e) => setMarginPercent(e.target.value)}
+                              className="h-10 w-full rounded-lg bg-slate-950 border border-emerald-500/40 px-3 text-sm text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none"
+                            />
+                            {(() => {
+                              const cost = parseFloat(newUnitCost) || 0;
+                              const margin = parseFloat(marginPercent) || 0;
+                              const calcSale = cost * (1 + margin / 100);
+                              return (
+                                <div className="h-4 mt-1 text-[11px] text-emerald-400 font-mono font-semibold truncate">
+                                  Precio resultante: Q {calcSale.toFixed(2)}
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Columna Derecha: Distribución Inicial de Stock */}
+                <div className="lg:col-span-6 space-y-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5">
+                  <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+                    <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-2">
+                      <Building2 className="w-4 h-4" />
+                      3. Distribución Inicial de Stock Físico
+                    </span>
+                    <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 font-mono">
+                      Stock Total Inicial: {totalInitialStockInModal} uds
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-slate-400">
+                    Ingresa la cantidad inicial de unidades físicas asignadas a cada una de las sucursales:
+                  </p>
+
+                  <div className="space-y-3">
+                    {stores.map(store => (
+                      <div key={store.id} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                            <Building2 className="w-4 h-4" />
+                          </div>
+                          <div>
+                            <span className="font-bold text-slate-200 text-xs block">{store.name}</span>
+                            <span className="text-[10px] text-slate-500 font-mono">Sucursal: {store.id}</span>
+                          </div>
+                        </div>
+
+                        <div className="w-36">
+                          <input
+                            type="number"
+                            min="0"
+                            value={newInitialStocks[store.id] ?? 0}
+                            onChange={e => setNewInitialStocks({
+                              ...newInitialStocks,
+                              [store.id]: Math.max(0, parseInt(e.target.value, 10) || 0)
+                            })}
+                            className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono text-sm text-right focus:border-indigo-500 focus:outline-none"
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="p-3 bg-indigo-950/20 border border-indigo-500/20 rounded-xl text-[11px] text-indigo-300/80 flex items-start gap-2.5">
+                    <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                    <span>El stock ingresado se almacenará directamente en la tabla <strong>store_inventory</strong> como fuente única de verdad.</span>
+                  </div>
                 </div>
               </div>
 
@@ -996,16 +1039,17 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                 <button
                   type="button"
                   onClick={() => setShowAddProductModal(false)}
-                  className="h-10 px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition cursor-pointer"
+                  className="h-10 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSavingProduct}
-                  className="h-10 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+                  className="h-10 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
-                  {isSavingProduct ? 'Guardando...' : 'Guardar Producto'}
+                  <Check className="w-4 h-4" />
+                  <span>{isSavingProduct ? 'Guardando...' : 'Guardar Producto'}</span>
                 </button>
               </div>
             </form>
@@ -1016,108 +1060,144 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       {/* MODAL 2: NUEVO TRASLADO */}
       {showTransferModal && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-5 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-              <h3 className="font-bold text-white text-base flex items-center gap-2">
-                <ArrowRightLeft className="w-5 h-5 text-indigo-400" />
-                Crear Traslado entre Tiendas
-              </h3>
-              <button onClick={() => setShowTransferModal(false)} className="text-slate-400 hover:text-white p-1 cursor-pointer">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[95vw] max-w-5xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in duration-200">
+            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+              <div>
+                <h3 className="font-extrabold text-white text-lg sm:text-xl flex items-center gap-2.5">
+                  <ArrowRightLeft className="w-6 h-6 text-indigo-400" />
+                  Crear Traslado entre Tiendas
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">Transfiere stock físico entre sucursales de forma atómica y segura</p>
+              </div>
+              <button
+                onClick={() => setShowTransferModal(false)}
+                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+                title="Cerrar modal"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateTransfer} className="space-y-4 text-xs">
-              {/* Origen y Destino */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <label className="font-semibold text-slate-400 uppercase">Tienda Origen *</label>
-                  <select
-                    value={fromStoreId}
-                    onChange={(e) => setFromStoreId(e.target.value)}
-                    className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
-                  >
-                    {stores.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+            <form onSubmit={handleCreateTransfer} className="space-y-6 text-xs">
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+                {/* Columna Izquierda: Ruta de Envío y Notas */}
+                <div className="lg:col-span-6 space-y-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5">
+                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-800/80">
+                    <Building2 className="w-4 h-4" />
+                    <span>1. Ruta de Sucursales</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-slate-300 uppercase text-xs">Tienda Origen *</label>
+                      <select
+                        value={fromStoreId}
+                        onChange={(e) => setFromStoreId(e.target.value)}
+                        className="w-full h-11 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs"
+                      >
+                        {stores.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                      <label className="font-semibold text-slate-300 uppercase text-xs">Tienda Destino *</label>
+                      <select
+                        value={toStoreId}
+                        onChange={(e) => setToStoreId(e.target.value)}
+                        className="w-full h-11 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs"
+                      >
+                        {stores.map(s => (
+                          <option key={s.id} value={s.id}>{s.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5 pt-2">
+                    <label className="font-semibold text-slate-300 uppercase text-xs">Notas / Observaciones (Opcional)</label>
+                    <textarea
+                      rows={3}
+                      placeholder="Ej. Reabastecimiento de existencias para fin de semana..."
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      className="w-full p-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs resize-none"
+                    />
+                  </div>
                 </div>
 
-                <div className="space-y-1">
-                  <label className="font-semibold text-slate-400 uppercase">Tienda Destino *</label>
-                  <select
-                    value={toStoreId}
-                    onChange={(e) => setToStoreId(e.target.value)}
-                    className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
-                  >
-                    {stores.map(s => (
-                      <option key={s.id} value={s.id}>{s.name}</option>
-                    ))}
-                  </select>
+                {/* Columna Derecha: Selección de Producto y Cantidad */}
+                <div className="lg:col-span-6 space-y-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5">
+                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-800/80">
+                    <Boxes className="w-4 h-4" />
+                    <span>2. Producto y Cantidades</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-slate-300 uppercase text-xs">Seleccionar Producto *</label>
+                    <select
+                      value={selectedProductId || ''}
+                      onChange={(e) => setSelectedProductId(Number(e.target.value))}
+                      className="w-full h-11 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs"
+                    >
+                      {matrix.map(p => {
+                        let avail = p.stock_tienda_1 || 0;
+                        if (fromStoreId === 'tienda_2') avail = p.stock_tienda_2 || 0;
+                        if (fromStoreId === 'tienda_3') avail = p.stock_tienda_3 || 0;
+
+                        return (
+                          <option key={p.id} value={p.id}>
+                            {p.sku} - {p.name} (Disp: {avail} uds)
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="font-semibold text-slate-300 uppercase text-xs">Cantidad a Trasladar (Unidades) *</label>
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={transferQty}
+                      onChange={(e) => setTransferQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                      className="w-full h-11 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-sm focus:border-indigo-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl text-xs flex items-center justify-between text-slate-300 font-mono">
+                    <span className="text-slate-400">Stock actual en origen:</span>
+                    <span className="font-bold text-emerald-400">
+                      {(() => {
+                        const prod = matrix.find(p => p.id === selectedProductId);
+                        if (!prod) return 0;
+                        if (fromStoreId === 'tienda_1') return prod.stock_tienda_1 || 0;
+                        if (fromStoreId === 'tienda_2') return prod.stock_tienda_2 || 0;
+                        if (fromStoreId === 'tienda_3') return prod.stock_tienda_3 || 0;
+                        return 0;
+                      })()} uds disponibles
+                    </span>
+                  </div>
                 </div>
-              </div>
-
-              {/* Producto a trasladar */}
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-400 uppercase">Seleccionar Producto *</label>
-                <select
-                  value={selectedProductId || ''}
-                  onChange={(e) => setSelectedProductId(Number(e.target.value))}
-                  className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
-                >
-                  {matrix.map(p => {
-                    let avail = p.stock_tienda_1 || 0;
-                    if (fromStoreId === 'tienda_2') avail = p.stock_tienda_2 || 0;
-                    if (fromStoreId === 'tienda_3') avail = p.stock_tienda_3 || 0;
-
-                    return (
-                      <option key={p.id} value={p.id}>
-                        {p.sku} - {p.name} (Disp: {avail} uds)
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-
-              {/* Cantidad */}
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-400 uppercase">Cantidad a Trasladar *</label>
-                <input
-                  type="number"
-                  min="1"
-                  required
-                  value={transferQty}
-                  onChange={(e) => setTransferQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                  className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono focus:border-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Notas */}
-              <div className="space-y-1">
-                <label className="font-semibold text-slate-400 uppercase">Notas / Motivo (Opcional)</label>
-                <input
-                  type="text"
-                  placeholder="Ej. Reabastecimiento de sucursal..."
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
-                />
               </div>
 
               <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800">
                 <button
                   type="button"
                   onClick={() => setShowTransferModal(false)}
-                  className="h-10 px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition cursor-pointer"
+                  className="h-10 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="h-10 px-5 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+                  className="h-10 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
-                  {submitting ? 'Procesando...' : 'Crear Traslado'}
+                  <ArrowRightLeft className="w-4 h-4" />
+                  <span>{submitting ? 'Procesando...' : 'Crear Traslado'}</span>
                 </button>
               </div>
             </form>
@@ -1194,263 +1274,290 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       {/* MODAL 4: DETALLE DE EXISTENCIAS MULTITIENDA */}
       {selectedDetailProduct && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-lg p-6 shadow-2xl space-y-5 animate-in fade-in duration-200">
-            <div className="flex items-start justify-between border-b border-slate-800 pb-3.5">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in duration-200">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
               <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded border border-indigo-500/20">
+                <div className="flex items-center gap-2 mb-1.5">
+                  <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-3 py-1 rounded-lg border border-indigo-500/20">
                     {selectedDetailProduct.sku}
                   </span>
-                  <span className="text-xs font-semibold text-slate-400 bg-slate-800 px-2 py-0.5 rounded border border-slate-700">
-                    {selectedDetailProduct.description || 'General'}
+                  <span className="text-xs font-semibold text-slate-300 bg-slate-800/80 px-2.5 py-1 rounded-lg border border-slate-700">
+                    {selectedDetailProduct.category || selectedDetailProduct.description || 'General'}
                   </span>
                 </div>
-                <h2 className="text-lg font-bold text-white tracking-tight">{selectedDetailProduct.name}</h2>
+                <h2 className="text-xl sm:text-2xl font-bold text-white tracking-tight">{selectedDetailProduct.name}</h2>
               </div>
-              <button onClick={() => setSelectedDetailProduct(null)} className="text-slate-400 hover:text-white p-1 text-lg font-bold cursor-pointer">✕</button>
+              <button
+                onClick={() => setSelectedDetailProduct(null)}
+                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+                title="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {/* Desglose de existencias por sucursal */}
-            <div className="bg-slate-950 border border-slate-800 rounded-xl p-4 space-y-3">
-              {(() => {
-                const s1 = selectedDetailMatrix?.stock_tienda_1 ?? 0;
-                const s2 = selectedDetailMatrix?.stock_tienda_2 ?? 0;
-                const s3 = selectedDetailMatrix?.stock_tienda_3 ?? 0;
-                const physicalTotal = s1 + s2 + s3;
-                const transitTotal = selectedDetailMatrix?.stock_transito ?? 0;
-                const grandTotal = selectedDetailMatrix?.stock_total ?? (physicalTotal + transitTotal);
+            {/* Grid 2 Columnas Lado a Lado: Existencias Multitienda y Precios Comerciales */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+              {/* Columna Izquierda (7 cols): Desglose de Existencias por Sucursal */}
+              <div className="lg:col-span-7 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 space-y-4">
+                {(() => {
+                  const s1 = selectedDetailMatrix?.stock_tienda_1 ?? 0;
+                  const s2 = selectedDetailMatrix?.stock_tienda_2 ?? 0;
+                  const s3 = selectedDetailMatrix?.stock_tienda_3 ?? 0;
+                  const physicalTotal = s1 + s2 + s3;
+                  const transitTotal = selectedDetailMatrix?.stock_transito ?? 0;
+                  const grandTotal = selectedDetailMatrix?.stock_total ?? (physicalTotal + transitTotal);
 
-                return (
-                  <>
-                    <div className="flex items-center justify-between gap-3 w-full border-b border-slate-800 pb-2">
-                      <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-1.5 shrink-0">
-                        <Building2 className="w-4 h-4" />
-                        Detalle de Existencias Multitienda
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-semibold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
-                          Total: {grandTotal} uds
+                  return (
+                    <>
+                      <div className="flex items-center justify-between gap-3 w-full border-b border-slate-800/80 pb-3">
+                        <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-2 shrink-0">
+                          <Building2 className="w-4 h-4" />
+                          Existencias Físicas Multitienda
                         </span>
-                        {transitTotal > 0 && (
-                          <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap">
-                            🚚 {transitTotal} en camino
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap font-mono">
+                            Total: {grandTotal} uds
                           </span>
+                          {transitTotal > 0 && (
+                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap font-mono">
+                              🚚 {transitTotal} en camino
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                        {stores.map(s => {
+                          let qty = 0;
+                          if (s.id === 'tienda_1') qty = s1;
+                          else if (s.id === 'tienda_2') qty = s2;
+                          else if (s.id === 'tienda_3') qty = s3;
+
+                          return (
+                            <div key={s.id} className="bg-slate-900 border border-slate-800/90 p-3.5 rounded-xl text-center space-y-1">
+                              <span className="text-[11px] font-semibold text-slate-400 block truncate">{s.name}</span>
+                              <span className={`text-2xl font-black font-mono block ${qty > 0 ? 'text-white' : 'text-slate-600'}`}>
+                                {qty}
+                              </span>
+                              <span className="text-[10px] text-slate-500 block uppercase font-mono">unidades</span>
+                            </div>
+                          );
+                        })}
+
+                        {/* 4ta caja: En Tránsito */}
+                        <div className="bg-amber-950/20 border border-amber-500/30 p-3.5 rounded-xl text-center space-y-1">
+                          <span className="text-[11px] font-semibold text-amber-400 block truncate">En Tránsito</span>
+                          <span className={`text-2xl font-black font-mono block ${transitTotal > 0 ? 'text-amber-400' : 'text-slate-600'}`}>
+                            {transitTotal}
+                          </span>
+                          <span className="text-[10px] text-amber-500/70 block uppercase font-mono">en camino</span>
+                        </div>
+                      </div>
+
+                      {/* Desglose de envíos en camino si existen */}
+                      {selectedDetailMatrix?.transits && selectedDetailMatrix.transits.length > 0 && (
+                        <div className="bg-amber-950/30 border border-amber-500/20 p-3.5 rounded-xl space-y-2 text-xs mt-3">
+                          <span className="text-xs font-bold text-amber-300 block flex items-center gap-1.5">
+                            🚚 Envíos activos en movimiento:
+                          </span>
+                          <div className="space-y-1.5">
+                            {selectedDetailMatrix.transits.map((t: any, idx: number) => {
+                              const fromName = t.from_store_name || getStoreName(t.from_store_id);
+                              const toName = t.to_store_name || getStoreName(t.to_store_id);
+                              return (
+                                <div key={idx} className="text-xs text-amber-200/90 font-mono flex items-center justify-between p-2 rounded-lg bg-amber-950/40 border border-amber-500/10">
+                                  <span>De <strong>{fromName}</strong> a <strong>{toName}</strong>:</span>
+                                  <span className="font-bold text-amber-300">{t.quantity} unidades</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </div>
+
+              {/* Columna Derecha (5 cols): Precios Comerciales */}
+              <div className="lg:col-span-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 space-y-4">
+                <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 w-full">
+                  <div className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
+                    <DollarSign className="w-4 h-4 text-indigo-400" />
+                    <span>Precios Comerciales (Q)</span>
+                  </div>
+                  {currentUser?.role !== 'Vendedor' && !isEditingPrices && (
+                    <button
+                      onClick={() => setIsEditingPrices(true)}
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1 rounded-lg border border-indigo-500/20 transition cursor-pointer"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Editar</span>
+                    </button>
+                  )}
+                </div>
+
+                {!isEditingPrices ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl space-y-1">
+                        <span className="text-[11px] font-semibold text-slate-400 block uppercase">Precio de Costo</span>
+                        <span className="text-lg font-extrabold font-mono text-slate-100 block">
+                          Q {(selectedDetailProduct.cost_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                      <div className="bg-emerald-950/20 border border-emerald-500/20 p-3.5 rounded-xl space-y-1">
+                        <span className="text-[11px] font-semibold text-emerald-400 block uppercase">Precio de Venta</span>
+                        <span className="text-lg font-black font-mono text-emerald-400 block">
+                          Q {(selectedDetailProduct.sale_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                      </div>
+                    </div>
+
+                    {(() => {
+                      const cost = selectedDetailProduct.cost_price || 0;
+                      const sale = selectedDetailProduct.sale_price || 0;
+                      const profit = sale - cost;
+                      const margin = cost > 0 ? (profit / cost) * 100 : 0;
+
+                      return (
+                        <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl flex items-center justify-between text-xs font-mono">
+                          <span className="text-slate-400">Margen Comercial:</span>
+                          <span className={`font-bold ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            +Q {profit.toFixed(2)} ({margin.toFixed(1)}%)
+                          </span>
+                        </div>
+                      );
+                    })()}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
+                      {/* Columna Costo */}
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-400 mb-1.5">PRECIO COSTO (Q)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editCostPrice}
+                          onChange={(e) => setEditCostPrice(e.target.value)}
+                          className="h-10 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
+                        />
+                      </div>
+
+                      {/* Columna Venta */}
+                      <div>
+                        <label className="block text-xs font-semibold text-emerald-400 mb-1.5">
+                          {editPricingMode === 'fixed' ? 'PRECIO VENTA (Q)' : 'MARGEN DESEADO (%)'}
+                        </label>
+                        {editPricingMode === 'fixed' ? (
+                          <>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editSalePrice}
+                              onChange={(e) => setEditSalePrice(e.target.value)}
+                              className="h-10 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
+                            />
+                            {(() => {
+                              const cost = parseFloat(editCostPrice) || 0;
+                              const sale = parseFloat(editSalePrice) || 0;
+                              const profit = sale - cost;
+                              const pct = cost > 0 ? (profit / cost) * 100 : 0;
+                              return (
+                                <div className="mt-1 text-[11px] text-slate-400 font-mono truncate">
+                                  Margen: +{pct.toFixed(1)}% (Q {profit.toFixed(2)})
+                                </div>
+                              );
+                            })()}
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              value={editMarginPercent}
+                              onChange={(e) => setEditMarginPercent(e.target.value)}
+                              className="h-10 w-full rounded-lg bg-slate-900 border border-emerald-500/40 px-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
+                            />
+                            {(() => {
+                              const cost = parseFloat(editCostPrice) || 0;
+                              const margin = parseFloat(editMarginPercent) || 0;
+                              const calcSale = cost * (1 + margin / 100);
+                              return (
+                                <div className="mt-1 text-[11px] text-emerald-400 font-mono font-bold truncate">
+                                  Venta: Q {calcSale.toFixed(2)}
+                                </div>
+                              );
+                            })()}
+                          </>
                         )}
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
-                      {stores.map(s => {
-                        let qty = 0;
-                        if (s.id === 'tienda_1') qty = s1;
-                        else if (s.id === 'tienda_2') qty = s2;
-                        else if (s.id === 'tienda_3') qty = s3;
+                    {/* Barra Inferior de Controles */}
+                    <div className="flex items-center justify-between pt-2 border-t border-slate-800 w-full">
+                      <div className="inline-flex bg-slate-900 p-0.5 rounded border border-slate-700/60 text-[10px] shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setEditPricingMode('fixed')}
+                          className={`px-2 py-0.5 rounded cursor-pointer transition ${
+                            editPricingMode === 'fixed'
+                              ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          Fijo (Q)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditPricingMode('margin')}
+                          className={`px-2 py-0.5 rounded cursor-pointer transition ${
+                            editPricingMode === 'margin'
+                              ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          Margen (%)
+                        </button>
+                      </div>
 
-                        return (
-                          <div key={s.id} className="bg-slate-900 border border-slate-800 p-2.5 rounded-xl text-center space-y-0.5">
-                            <span className="text-[10px] font-semibold text-slate-400 block truncate">{s.name}</span>
-                            <span className={`text-lg font-black font-mono block ${qty > 0 ? 'text-white' : 'text-slate-600'}`}>
-                              {qty}
-                            </span>
-                            <span className="text-[9px] text-slate-500 block">unidades</span>
-                          </div>
-                        );
-                      })}
-
-                      {/* 4ta caja: En Tránsito */}
-                      <div className="bg-amber-950/20 border border-amber-500/30 p-2.5 rounded-xl text-center space-y-0.5">
-                        <span className="text-[10px] font-semibold text-amber-400 block truncate">En Tránsito</span>
-                        <span className={`text-lg font-black font-mono block ${transitTotal > 0 ? 'text-amber-400' : 'text-slate-600'}`}>
-                          {transitTotal}
-                        </span>
-                        <span className="text-[9px] text-amber-500/70 block">en camino</span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsEditingPrices(false);
+                            setEditCostPrice((selectedDetailProduct.cost_price || 0).toString());
+                            setEditSalePrice((selectedDetailProduct.sale_price || 0).toString());
+                          }}
+                          className="h-8 px-3 text-xs font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSavePrices}
+                          disabled={isSavingPrices}
+                          className="h-8 px-3.5 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Check className="w-3.5 h-3.5" />
+                          <span>{isSavingPrices ? 'Guardando...' : 'Guardar'}</span>
+                        </button>
                       </div>
                     </div>
-
-                    {/* Desglose de envíos en camino si existen */}
-                    {selectedDetailMatrix?.transits && selectedDetailMatrix.transits.length > 0 && (
-                      <div className="bg-amber-950/30 border border-amber-500/20 p-2.5 rounded-xl space-y-1 text-xs mt-2">
-                        <span className="text-[11px] font-bold text-amber-300 block flex items-center gap-1">
-                          🚚 Envíos activos en movimiento:
-                        </span>
-                        {selectedDetailMatrix.transits.map((t: any, idx: number) => {
-                          const fromName = t.from_store_name || getStoreName(t.from_store_id);
-                          const toName = t.to_store_name || getStoreName(t.to_store_id);
-                          return (
-                            <div key={idx} className="text-[11px] text-amber-200/90 font-mono flex items-center justify-between">
-                              <span>De {fromName} a {toName}:</span>
-                              <span className="font-bold">{t.quantity} unidades</span>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
-
-            {/* Precios comerciales */}
-            <div className="bg-slate-950 border border-slate-800 p-3.5 rounded-xl space-y-3">
-              <div className="flex items-center justify-between mb-3 w-full">
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-                  <DollarSign className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Precios Comerciales (Q)</span>
-                </div>
-                {currentUser?.role !== 'Vendedor' && !isEditingPrices && (
-                  <button
-                    onClick={() => setIsEditingPrices(true)}
-                    className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-2.5 py-1 rounded-lg border border-indigo-500/20 transition cursor-pointer"
-                  >
-                    <Pencil className="w-3 h-3" />
-                    <span>Editar Precios</span>
-                  </button>
+                  </div>
                 )}
               </div>
-
-              {!isEditingPrices ? (
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl space-y-1">
-                    <span className="text-xs font-semibold text-slate-400 block uppercase">Precio de Costo (Q)</span>
-                    <span className="text-lg font-extrabold font-mono text-slate-100 block">
-                      Q {(selectedDetailProduct.cost_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                  <div className="bg-emerald-950/20 border border-emerald-500/20 p-3.5 rounded-xl space-y-1">
-                    <span className="text-xs font-semibold text-emerald-400 block uppercase">Precio de Venta (Q)</span>
-                    <span className="text-lg font-black font-mono text-emerald-400 block">
-                      Q {(selectedDetailProduct.sale_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  {/* Fila de Inputs (Grid 2 columnas niveladas) */}
-                  <div className="grid grid-cols-2 gap-3 mb-3 items-start">
-                    {/* Columna Costo */}
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-400 mb-1.5">PRECIO COSTO (Q)</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={editCostPrice}
-                        onChange={(e) => setEditCostPrice(e.target.value)}
-                        className="h-10 w-full rounded-lg bg-slate-900/60 border border-slate-700 px-3 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
-                      />
-                      <div className="h-4 mt-1"></div>
-                    </div>
-
-                    {/* Columna Venta */}
-                    <div>
-                      <label className="block text-xs font-semibold text-emerald-400 mb-1.5">
-                        {editPricingMode === 'fixed' ? 'PRECIO VENTA (Q)' : 'MARGEN DESEADO (%)'}
-                      </label>
-                      {editPricingMode === 'fixed' ? (
-                        <>
-                          <input
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            value={editSalePrice}
-                            onChange={(e) => setEditSalePrice(e.target.value)}
-                            className="h-10 w-full rounded-lg bg-slate-900/60 border border-slate-700 px-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
-                          />
-                          {(() => {
-                            const cost = parseFloat(editCostPrice) || 0;
-                            const sale = parseFloat(editSalePrice) || 0;
-                            const profit = sale - cost;
-                            const pct = cost > 0 ? (profit / cost) * 100 : 0;
-                            return (
-                              <div className="h-4 mt-1 text-[11px] text-slate-400 font-mono truncate">
-                                Margen: +{pct.toFixed(1)}% (Q {profit.toFixed(2)})
-                              </div>
-                            );
-                          })()}
-                        </>
-                      ) : (
-                        <>
-                          <input
-                            type="number"
-                            step="0.1"
-                            min="0"
-                            value={editMarginPercent}
-                            onChange={(e) => setEditMarginPercent(e.target.value)}
-                            className="h-10 w-full rounded-lg bg-slate-900/60 border border-slate-700 px-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
-                          />
-                          {(() => {
-                            const cost = parseFloat(editCostPrice) || 0;
-                            const margin = parseFloat(editMarginPercent) || 0;
-                            const calcSale = cost * (1 + margin / 100);
-                            return (
-                              <div className="h-4 mt-1 text-[11px] text-emerald-400 font-mono font-bold truncate">
-                                Venta: Q {calcSale.toFixed(2)}
-                              </div>
-                            );
-                          })()}
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Barra Inferior de Controles (Switch y Acciones) */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-800/80 w-full">
-                    {/* Switch [Fijo (Q) | Margen (%)] */}
-                    <div className="inline-flex bg-slate-900 p-0.5 rounded border border-slate-700/60 text-[10px] shrink-0">
-                      <button
-                        type="button"
-                        onClick={() => setEditPricingMode('fixed')}
-                        className={`px-2 py-0.5 rounded cursor-pointer transition ${
-                          editPricingMode === 'fixed'
-                            ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        Fijo (Q)
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditPricingMode('margin')}
-                        className={`px-2 py-0.5 rounded cursor-pointer transition ${
-                          editPricingMode === 'margin'
-                            ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
-                            : 'text-slate-400 hover:text-slate-200'
-                        }`}
-                      >
-                        Margen (%)
-                      </button>
-                    </div>
-
-                    {/* Botones de acción */}
-                    <div className="flex items-center gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setIsEditingPrices(false);
-                          setEditCostPrice((selectedDetailProduct.cost_price || 0).toString());
-                          setEditSalePrice((selectedDetailProduct.sale_price || 0).toString());
-                        }}
-                        className="h-8 px-3 text-xs font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
-                      >
-                        Cancelar
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleSavePrices}
-                        disabled={isSavingPrices}
-                        className="h-8 px-3.5 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                      >
-                        <Check className="w-3.5 h-3.5" />
-                        <span>{isSavingPrices ? 'Guardando...' : 'Guardar'}</span>
-                      </button>
-                    </div>
-                  </div>
-                </>
-              )}
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
-              <div className="flex items-center gap-2">
+            {/* Footer de Acciones del Modal */}
+            <div className="flex items-center justify-between pt-4 border-t border-slate-800">
+              <div className="flex items-center gap-3">
                 <button
                   onClick={() => {
                     const prod = selectedDetailProduct;
@@ -1459,10 +1566,10 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                     setStockEntryStoreId(stores[0]?.id || 'tienda_1');
                     setStockEntryQty(1);
                   }}
-                  className="h-9 px-3.5 inline-flex items-center gap-2 text-xs font-semibold rounded-lg bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/25 transition-colors cursor-pointer"
+                  className="h-10 px-4 inline-flex items-center gap-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-lg shadow-emerald-600/20"
                 >
                   <Plus className="w-4 h-4" />
-                  <span>Cargar Entrada</span>
+                  <span>Cargar Entrada de Stock</span>
                 </button>
 
                 {currentUser?.role !== 'Vendedor' && (
@@ -1472,7 +1579,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                       setSelectedDetailProduct(null);
                       setDeleteConfirmProduct(prod);
                     }}
-                    className="h-9 px-3.5 inline-flex items-center gap-2 text-xs font-semibold rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30 hover:bg-rose-500/25 transition-colors cursor-pointer"
+                    className="h-10 px-4 inline-flex items-center gap-2 text-xs font-semibold rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/30 hover:bg-rose-500/25 transition-colors cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                     <span>Eliminar SKU</span>
@@ -1482,7 +1589,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
               <button
                 onClick={() => setSelectedDetailProduct(null)}
-                className="h-9 px-4 inline-flex items-center text-xs font-semibold rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
+                className="h-10 px-6 inline-flex items-center text-xs font-bold rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors cursor-pointer"
               >
                 Cerrar
               </button>
@@ -1527,13 +1634,13 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       {/* MODAL 6: DETALLE AMPLIO DE TRASLADO */}
       {selectedDetailTransfer && (
         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-2xl p-6 shadow-2xl space-y-5 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in duration-200">
             {/* Header */}
             <div className="flex items-start justify-between border-b border-slate-800 pb-4">
-              <div className="space-y-1">
+              <div className="space-y-1.5">
                 <div className="flex items-center gap-3">
-                  <h3 className="font-extrabold text-white text-lg flex items-center gap-2">
-                    <ArrowRightLeft className="w-5 h-5 text-indigo-400" />
+                  <h3 className="font-extrabold text-white text-xl sm:text-2xl flex items-center gap-2.5">
+                    <ArrowRightLeft className="w-6 h-6 text-indigo-400" />
                     Traslado #{selectedDetailTransfer.id}
                   </h3>
                   {selectedDetailTransfer.status === 'en_transito' ? (
@@ -1548,9 +1655,9 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                     </span>
                   )}
                 </div>
-                <div className="text-xs text-slate-400 flex flex-wrap gap-4 pt-1 font-mono">
+                <div className="text-xs text-slate-400 flex flex-wrap gap-5 font-mono pt-1">
                   <span>
-                    <strong>Creado:</strong>{' '}
+                    <strong className="text-slate-300">Fecha de Creación:</strong>{' '}
                     {new Date(selectedDetailTransfer.created_at).toLocaleString('es-GT', {
                       dateStyle: 'medium',
                       timeStyle: 'short'
@@ -1558,7 +1665,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                   </span>
                   {selectedDetailTransfer.received_at && (
                     <span>
-                      <strong>Recibido:</strong>{' '}
+                      <strong className="text-emerald-400">Fecha de Recepción:</strong>{' '}
                       {new Date(selectedDetailTransfer.received_at).toLocaleString('es-GT', {
                         dateStyle: 'medium',
                         timeStyle: 'short'
@@ -1570,85 +1677,87 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
               <button
                 onClick={() => setSelectedDetailTransfer(null)}
-                className="text-slate-400 hover:text-white p-1 text-lg font-bold cursor-pointer"
+                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+                title="Cerrar modal"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            {/* Flujo de Ruta (Visual destacado) */}
-            <div className="bg-slate-950 border border-slate-800 p-4 rounded-xl space-y-2">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 block">
-                Ruta de Envío entre Sucursales
+            {/* Flujo de Ruta (Visual destacado a todo lo ancho) */}
+            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl space-y-3">
+              <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                <Building2 className="w-4 h-4" />
+                Ruta de Traslado entre Sucursales
               </span>
-              <div className="flex items-center justify-between gap-3 bg-slate-900/90 border border-slate-800 p-4 rounded-xl">
+              <div className="grid grid-cols-1 md:grid-cols-11 gap-4 items-center bg-slate-900 border border-slate-800 p-5 rounded-xl">
                 {/* Origen */}
-                <div className="flex-1 text-center space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Tienda Origen</span>
-                  <div className="font-bold text-sm text-slate-100 flex items-center justify-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-emerald-400" />
+                <div className="md:col-span-5 text-center sm:text-left space-y-1.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Origen (Salida de Stock)</span>
+                  <div className="font-extrabold text-base text-slate-100 flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-emerald-400 shrink-0" />
                     <span>{selectedDetailTransfer.from_store_name || getStoreName(selectedDetailTransfer.from_store_id)}</span>
                   </div>
                 </div>
 
-                {/* Flecha indicadora */}
-                <div className="flex flex-col items-center px-2">
-                  <div className="p-2 bg-indigo-600/20 text-indigo-400 rounded-full border border-indigo-500/30">
+                {/* Flecha indicadora central */}
+                <div className="md:col-span-1 flex flex-col items-center justify-center py-2">
+                  <div className="p-3 bg-indigo-600/20 text-indigo-400 rounded-full border border-indigo-500/30 shadow-lg shadow-indigo-600/10">
                     <ArrowRight className="w-5 h-5" />
                   </div>
-                  <span className="text-[10px] text-indigo-400/80 font-mono mt-1 font-semibold">Envío Interno</span>
+                  <span className="text-[10px] text-indigo-400 font-mono mt-1 font-bold">Traslado</span>
                 </div>
 
                 {/* Destino */}
-                <div className="flex-1 text-center space-y-1">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 block">Tienda Destino</span>
-                  <div className="font-bold text-sm text-slate-100 flex items-center justify-center gap-1.5">
-                    <Building2 className="w-4 h-4 text-indigo-400" />
+                <div className="md:col-span-5 text-center sm:text-left space-y-1.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800">
+                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Destino (Entrada de Stock)</span>
+                  <div className="font-extrabold text-base text-slate-100 flex items-center gap-2">
+                    <Building2 className="w-5 h-5 text-indigo-400 shrink-0" />
                     <span>{selectedDetailTransfer.to_store_name || getStoreName(selectedDetailTransfer.to_store_id)}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            {/* Tabla / Lista de Productos Trasladados */}
-            <div className="bg-slate-950 border border-slate-800 rounded-xl overflow-hidden">
-              <div className="p-3 bg-slate-900/60 border-b border-slate-800 flex items-center justify-between">
-                <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+            {/* Tabla / Lista de Productos Trasladados Amplia */}
+            <div className="bg-slate-950/80 border border-slate-800 rounded-2xl overflow-hidden shadow-inner">
+              <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
                   <Boxes className="w-4 h-4" />
-                  Productos Trasladados
+                  Productos y Cantidades Trasladadas
                 </span>
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-0.5 rounded-full border border-emerald-500/20 font-mono">
-                  Total piezas: {selectedDetailTransfer.items?.reduce((sum, item) => sum + item.quantity, 0) || 0} unidades
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3.5 py-1 rounded-full border border-emerald-500/20 font-mono">
+                  Total de Unidades: {selectedDetailTransfer.items?.reduce((sum, item) => sum + item.quantity, 0) || 0} piezas
                 </span>
               </div>
 
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto w-full">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-900/80 text-slate-400 font-semibold uppercase tracking-wider border-b border-slate-800">
+                  <thead className="bg-slate-900/90 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
                     <tr>
-                      <th className="py-2.5 px-4">SKU</th>
-                      <th className="py-2.5 px-4">Nombre del Producto</th>
-                      <th className="py-2.5 px-4 text-right">Unidades Trasladadas</th>
+                      <th className="py-3 px-6 w-48">Código SKU</th>
+                      <th className="py-3 px-6">Descripción del Producto</th>
+                      <th className="py-3 px-6 text-right w-56">Cantidad Trasladada</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                  <tbody className="divide-y divide-slate-800/70 text-slate-200">
                     {selectedDetailTransfer.items && selectedDetailTransfer.items.length > 0 ? (
                       selectedDetailTransfer.items.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-slate-900/40">
-                          <td className="py-3 px-4 font-mono font-bold text-indigo-400">
+                        <tr key={idx} className="hover:bg-slate-900/50 transition-colors">
+                          <td className="py-4 px-6 font-mono font-bold text-indigo-400 text-sm">
                             {item.sku || `PROD-${item.product_id}`}
                           </td>
-                          <td className="py-3 px-4 font-medium text-white">
+                          <td className="py-4 px-6 font-semibold text-white text-sm">
                             {item.product_name || `Producto #${item.product_id}`}
                           </td>
-                          <td className="py-3 px-4 text-right font-mono font-bold text-emerald-400 text-sm">
-                            {item.quantity} uds
+                          <td className="py-4 px-6 text-right font-mono font-extrabold text-emerald-400 text-base">
+                            {item.quantity} <span className="text-xs text-slate-400 font-normal">uds</span>
                           </td>
                         </tr>
                       ))
                     ) : (
                       <tr>
-                        <td colSpan={3} className="py-6 text-center text-slate-500">
+                        <td colSpan={3} className="py-8 text-center text-slate-500 text-sm">
                           No hay items asociados a este traslado.
                         </td>
                       </tr>
@@ -1659,17 +1768,17 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
             </div>
 
             {/* Notas / Observaciones */}
-            <div className="bg-slate-950 border border-slate-800 p-3.5 rounded-xl space-y-1">
-              <span className="text-xs font-semibold text-slate-400 uppercase block">Notas / Observaciones:</span>
+            <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-xl space-y-1.5">
+              <span className="text-xs font-bold text-slate-400 uppercase block tracking-wider">Notas / Observaciones del Envío:</span>
               <p className="text-xs text-slate-200 font-mono italic">
                 {selectedDetailTransfer.notes && selectedDetailTransfer.notes.trim() !== ''
                   ? `"${selectedDetailTransfer.notes}"`
-                  : 'Sin notas adicionales'}
+                  : 'Sin notas adicionales para este traslado.'}
               </p>
             </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+            <div className="flex items-center justify-between pt-4 border-t border-slate-800">
               {selectedDetailTransfer.status === 'en_transito' ? (
                 <button
                   onClick={() => {
@@ -1678,21 +1787,21 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                     handleReceiveTransfer(id);
                   }}
                   disabled={receivingId === selectedDetailTransfer.id}
-                  className="h-9 px-4 inline-flex items-center gap-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-lg shadow-emerald-600/20"
+                  className="h-10 px-5 inline-flex items-center gap-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-lg shadow-emerald-600/20"
                 >
                   <CheckCircle2 className="w-4 h-4" />
                   <span>Confirmar Recepción de Traslado</span>
                 </button>
               ) : (
-                <span className="text-xs text-emerald-400 font-semibold flex items-center gap-1.5">
+                <span className="text-xs text-emerald-400 font-semibold flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1.5 rounded-xl font-mono">
                   <CheckCircle2 className="w-4 h-4" />
-                  Traslado Completado y Recibido
+                  Traslado Completado y Recibido en Destino
                 </span>
               )}
 
               <button
                 onClick={() => setSelectedDetailTransfer(null)}
-                className="h-9 px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
+                className="h-10 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
               >
                 Cerrar
               </button>
