@@ -975,7 +975,7 @@ app.post('/api/inventory/stock-entry', (req, res) => {
       INSERT INTO store_inventory (store_id, product_id, stock)
       VALUES (?, ?, ?)
       ON CONFLICT(store_id, product_id)
-      DO UPDATE SET stock = stock + excluded.stock
+      DO UPDATE SET stock = store_inventory.stock + excluded.stock
     `;
 
     db.run(upsertQuery, [store_id, pId, qty], function (err) {
@@ -1176,7 +1176,7 @@ app.post('/api/transfers/:id/receive', (req, res) => {
             const upsertQuery = `
               INSERT INTO store_inventory (store_id, product_id, stock)
               VALUES (?, ?, ?)
-              ON CONFLICT(store_id, product_id) DO UPDATE SET stock = stock + excluded.stock
+              ON CONFLICT(store_id, product_id) DO UPDATE SET stock = store_inventory.stock + excluded.stock
             `;
 
             rawDb.run(upsertQuery, [toStoreId, item.product_id, item.quantity], (err) => {

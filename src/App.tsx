@@ -10,7 +10,8 @@ import { AnalyticsView } from './components/AnalyticsView';
 import { MultiStoreInventoryView } from './components/MultiStoreInventoryView';
 import { SalesView } from './components/SalesView';
 import { LoginView } from './components/LoginView';
-import { fetchDashboardStatsApi, fetchInventory, fetchTransactions, fetchBatches, fetchUsers, verifySessionApi, checkHealthApi, DashboardStats, User } from './services/api';
+import { fetchDashboardStatsApi, fetchInventory, fetchInventoryMatrixApi, fetchTransactions, fetchBatches, fetchUsers, verifySessionApi, checkHealthApi, DashboardStats, User } from './services/api';
+import { exportViewPdf } from './utils/pdfExport';
 import { DollarSign, Boxes, Layers, PackageCheck, CheckCircle } from 'lucide-react';
 
 export default function App() {
@@ -192,18 +193,32 @@ export default function App() {
 
   const handleExportPDF = async () => {
     try {
-      const [invData, trxsData, batchesData, usersData] = await Promise.all([
+      const [invData, matrixData, trxsData, batchesData, usersData] = await Promise.all([
         fetchInventory().catch(() => []),
+        fetchInventoryMatrixApi().catch(() => []),
         fetchTransactions().catch(() => []),
         fetchBatches().catch(() => []),
         fetchUsers().catch(() => [])
       ]);
 
+      let finalInventory = Array.isArray(invData) && invData.length > 0 ? invData : [];
+      if (finalInventory.length === 0 && Array.isArray(matrixData) && matrixData.length > 0) {
+        finalInventory = matrixData.map(m => ({
+          id: m.id,
+          sku: m.sku,
+          name: m.name,
+          category: 'General',
+          stock: m.stock_total || 0,
+          unitCost: (m.cost_price || 0) / 7.80,
+          lastUpdated: m.created_at || 'Reciente'
+        }));
+      }
+
       exportViewPdf({
         activeTab,
         user: currentUser,
         stats: dashboardStats,
-        inventory: Array.isArray(invData) ? invData : [],
+        inventory: finalInventory,
         transactions: Array.isArray(trxsData) ? trxsData : [],
         batches: Array.isArray(batchesData) ? batchesData : [],
         users: Array.isArray(usersData) ? usersData : []
