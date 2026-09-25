@@ -259,7 +259,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="flex-1 flex flex-col overflow-y-auto">
+      <main className="w-full flex-1 flex flex-col overflow-y-auto">
         <Header
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -278,11 +278,11 @@ export default function App() {
           </div>
         )}
 
-        <div className="p-4 sm:p-6 pb-24 md:pb-6 space-y-6 min-h-[calc(100vh-80px)]">
+        <div className="w-full flex-1 pb-24 md:pb-6 min-h-[calc(100vh-80px)]">
           
           {/* TAB 1: DASHBOARD DINÁMICO DESDE SQLITE */}
           {activeTab === 'dashboard' && (
-            <>
+            <div className="max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
               {/* Dynamic Live KPI Metrics (Horizontal Scrollable Ribbon on Mobile) */}
               <div className="flex overflow-x-auto gap-4 scrollbar-none pb-2 snap-x snap-mandatory md:grid md:grid-cols-2 lg:grid-cols-4 md:overflow-visible">
                 <div className="shrink-0 w-[270px] sm:w-auto snap-start">
@@ -340,17 +340,25 @@ export default function App() {
 
               {/* Recent Transactions Table */}
               <RecentTransactions searchTerm={searchTerm} />
-            </>
+            </div>
           )}
 
           {/* TAB: INVENTARIO MULTITIENDA */}
           {(activeTab === 'inventory' || activeTab === 'multistore') && <MultiStoreInventoryView currentUser={currentUser} />}
 
           {/* TAB: VENTAS RÁPIDAS (POS) */}
-          {activeTab === 'sales' && <SalesView currentUser={currentUser} />}
+          {activeTab === 'sales' && (
+            <div className="max-w-7xl mx-auto w-full px-6 py-6">
+              <SalesView currentUser={currentUser} />
+            </div>
+          )}
 
           {/* TAB: CONFIGURACIÓN */}
-          {activeTab === 'settings' && <SettingsView currentUser={currentUser} onUpdateUser={handleUpdateUser} />}
+          {activeTab === 'settings' && (
+            <div className="max-w-7xl mx-auto w-full px-6 py-6">
+              <SettingsView currentUser={currentUser} onUpdateUser={handleUpdateUser} />
+            </div>
+          )}
 
         </div>
       </main>

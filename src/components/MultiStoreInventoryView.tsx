@@ -19,7 +19,8 @@ import {
   DollarSign,
   AlertCircle,
   Store as StoreIcon,
-  PackageCheck
+  PackageCheck,
+  Calendar
 } from 'lucide-react';
 import {
   fetchStoresApi,
@@ -472,7 +473,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
   return (
     <>
-      <div className="p-4 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
       {/* Toast Notification */}
       {toast.show && (
         <div
@@ -787,6 +788,28 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
             </div>
           ) : (
             <div className="space-y-2">
+              {/* Encabezado estructurado para desktop */}
+              <div className="hidden lg:grid grid-cols-12 gap-4 px-4 py-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 bg-slate-900/60 border border-slate-800/80 rounded-xl">
+                <div className="col-span-2 flex items-center gap-1.5">
+                  <span>ID & Estado</span>
+                </div>
+                <div className="col-span-3 flex items-center gap-1.5">
+                  <StoreIcon className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Ruta de Sucursales</span>
+                </div>
+                <div className="col-span-3 flex items-center gap-1.5">
+                  <Boxes className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Detalle de Producto</span>
+                </div>
+                <div className="col-span-2 flex items-center gap-1.5">
+                  <Calendar className="w-3.5 h-3.5 text-slate-500" />
+                  <span>Fecha y Hora</span>
+                </div>
+                <div className="col-span-2 text-right">
+                  <span>Acción</span>
+                </div>
+              </div>
+
               {transfers.map(transfer => {
                 const isPending = transfer.status === 'en_transito';
                 const fromName = transfer.from_store_name || getStoreName(transfer.from_store_id);
@@ -800,42 +823,48 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                   <div
                     key={transfer.id}
                     onClick={() => setSelectedDetailTransfer(transfer)}
-                    className="flex items-center justify-between gap-4 p-3 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/40 transition-colors cursor-pointer"
+                    className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-12 gap-3 lg:gap-4 items-center p-3.5 rounded-xl bg-slate-900/50 border border-slate-800 hover:border-slate-700 hover:bg-slate-800/40 transition-colors cursor-pointer"
                   >
-                    {/* Bloque Izquierdo (Identificador y Ruta) */}
-                    <div className="flex items-center gap-3 whitespace-nowrap">
-                      <span className="text-xs font-mono text-slate-200 font-bold bg-slate-800 px-2 py-0.5 rounded border border-slate-700/60">
+                    {/* Columna 1: ID # y Badge de Estado (En Tránsito / Completado) */}
+                    <div className="sm:col-span-1 lg:col-span-2 flex items-center gap-2 shrink-0">
+                      <span className="text-xs font-mono text-slate-200 font-bold bg-slate-800 px-2.5 py-0.5 rounded border border-slate-700/60">
                         #{transfer.id}
                       </span>
 
                       {isPending ? (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 whitespace-nowrap">
                           <Clock className="w-3 h-3" />
                           <span>En Tránsito</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <span className="inline-flex items-center gap-1 text-[11px] px-2.5 py-0.5 rounded-full font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap">
                           <CheckCircle2 className="w-3 h-3" />
                           <span>Completado</span>
                         </span>
                       )}
-
-                      <div className="flex items-center gap-1.5 text-xs text-slate-200 font-semibold">
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700/60">{fromName}</span>
-                        <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                        <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700/60">{toName}</span>
-                      </div>
                     </div>
 
-                    {/* Bloque Central (Productos y Unidades) */}
-                    <div className="flex items-center gap-1.5 flex-wrap overflow-hidden">
+                    {/* Columna 2: Ruta (Tienda 1 -> Tienda 2) */}
+                    <div className="sm:col-span-1 lg:col-span-3 flex items-center gap-1.5 text-xs text-slate-200 font-semibold min-w-0">
+                      <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700/60 truncate" title={fromName}>
+                        {fromName}
+                      </span>
+                      <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                      <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700/60 truncate" title={toName}>
+                        {toName}
+                      </span>
+                    </div>
+
+                    {/* Columna 3: Detalle del producto y cantidad */}
+                    <div className="sm:col-span-2 lg:col-span-3 flex items-center gap-1.5 flex-wrap min-w-0 overflow-hidden">
                       {transfer.items && transfer.items.length > 0 ? (
                         transfer.items.map((item, idx) => (
                           <span
                             key={idx}
-                            className="text-xs font-medium bg-slate-800 text-slate-200 border border-slate-700/60 px-2.5 py-1 rounded-md whitespace-nowrap"
+                            className="text-xs font-medium bg-slate-800 text-slate-200 border border-slate-700/60 px-2.5 py-1 rounded-md whitespace-nowrap flex items-center gap-1.5"
                           >
-                            {item.product_name || `ID #${item.product_id}`}: <strong className="text-white">{item.quantity} uds</strong>
+                            <span className="truncate max-w-[130px]">{item.product_name || `ID #${item.product_id}`}:</span>
+                            <strong className="text-emerald-400 font-mono shrink-0">{item.quantity} uds</strong>
                           </span>
                         ))
                       ) : (
@@ -843,25 +872,33 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                       )}
                     </div>
 
-                    {/* Bloque Derecho (Fecha y Acción) */}
-                    <div className="flex items-center gap-3 whitespace-nowrap shrink-0">
-                      <span className="text-xs text-slate-300 font-mono font-medium">{formattedDate}</span>
+                    {/* Columna 4: Fecha y hora */}
+                    <div className="sm:col-span-1 lg:col-span-2 text-xs text-slate-300 font-mono font-medium flex items-center gap-1.5 whitespace-nowrap">
+                      <Calendar className="w-3.5 h-3.5 text-slate-500 shrink-0 hidden sm:inline" />
+                      <span>{formattedDate}</span>
+                    </div>
 
-                      {isPending && (
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <button
-                            onClick={() => handleReceiveTransfer(transfer.id)}
-                            disabled={receivingId === transfer.id}
-                            className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-xs shadow transition-all flex items-center gap-1.5 cursor-pointer"
-                          >
-                            {receivingId === transfer.id ? (
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
-                            ) : (
-                              <CheckCircle2 className="w-3.5 h-3.5" />
-                            )}
-                            <span>Confirmar Recepción</span>
-                          </button>
-                        </div>
+                    {/* Columna 5: Botón de acción (Confirmar Recepción) */}
+                    <div className="sm:col-span-1 lg:col-span-2 flex items-center justify-end whitespace-nowrap shrink-0" onClick={(e) => e.stopPropagation()}>
+                      {isPending ? (
+                        <button
+                          type="button"
+                          onClick={() => handleReceiveTransfer(transfer.id)}
+                          disabled={receivingId === transfer.id}
+                          className="h-8 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white font-semibold text-xs shadow transition-all flex items-center gap-1.5 cursor-pointer whitespace-nowrap"
+                        >
+                          {receivingId === transfer.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                          ) : (
+                            <CheckCircle2 className="w-3.5 h-3.5" />
+                          )}
+                          <span>Confirmar Recepción</span>
+                        </button>
+                      ) : (
+                        <span className="text-[11px] font-mono text-slate-500 flex items-center gap-1">
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500/70" />
+                          <span>Recibido</span>
+                        </span>
                       )}
                     </div>
                   </div>
