@@ -810,108 +810,105 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
       {/* MODAL 1: NUEVO PRODUCTO CON DISTRIBUCIÓN INICIAL */}
       {showAddProductModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in duration-200">
-            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-              <div>
-                <h3 className="font-extrabold text-white text-lg sm:text-xl flex items-center gap-2.5">
-                  <Package className="w-6 h-6 text-indigo-400" />
-                  Registrar Nuevo Producto / SKU
-                </h3>
-                <p className="text-xs text-slate-400 mt-1">Crea el producto en el catálogo maestro y asigna existencias iniciales por sucursal</p>
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[96vw] max-w-7xl h-[92vh] max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in duration-200">
+            {/* 1. Header Fijo Superior */}
+            <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-white text-lg sm:text-xl tracking-tight">
+                    Registrar Nuevo Producto / SKU
+                  </h3>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Crea el producto en el catálogo maestro y asigna existencias físicas iniciales por sucursal
+                  </p>
+                </div>
               </div>
               <button
+                type="button"
                 onClick={() => setShowAddProductModal(false)}
                 className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
-                title="Cerrar modal"
+                title="Cerrar modal (Esc)"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleCreateProductSubmit} className="space-y-6 text-xs">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-                {/* Columna Izquierda: Información General y Precios */}
-                <div className="lg:col-span-6 space-y-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5">
-                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-800/80">
-                    <Package className="w-4 h-4" />
-                    <span>1. Información General y Catálogo</span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Código SKU Único *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ej. PROD-005"
-                        value={newSku}
-                        onChange={(e) => setNewSku(e.target.value)}
-                        className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-indigo-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Categoría</label>
-                      <input
-                        type="text"
-                        placeholder="General (ej. Electrónica)"
-                        value={newCategory}
-                        onChange={(e) => setNewCategory(e.target.value)}
-                        className="h-10 w-full rounded-xl bg-slate-900 border border-slate-700 px-3 text-xs text-white focus:border-indigo-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Nombre del Producto *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej. Audífonos Bluetooth Pro / Smartphone 128GB"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      className="w-full h-10 px-3 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs"
-                    />
-                  </div>
-
-                  <div className="pt-2">
-                    <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-2 mb-3 border-b border-slate-800/80">
-                      <DollarSign className="w-4 h-4" />
-                      <span>2. Precios Comerciales (Q)</span>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start bg-slate-900/60 border border-slate-800 p-4 rounded-xl">
-                      {/* Columna 1 (Costo) */}
-                      <div>
-                        <div className="flex items-center justify-between h-6 mb-1.5">
-                          <label className="text-xs font-semibold text-slate-400 uppercase">Precio Costo (Q) *</label>
-                        </div>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          required
-                          value={newUnitCost}
-                          onChange={(e) => setNewUnitCost(e.target.value)}
-                          className="h-10 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-white font-mono focus:border-indigo-500 focus:outline-none"
-                        />
-                        <div className="h-4 mt-1"></div>
+            {/* Formulario que contiene cuerpo central scrolleable y footer fijo */}
+            <form onSubmit={handleCreateProductSubmit} className="flex-1 flex flex-col min-h-0">
+              {/* 2. Cuerpo Central Scrolleable */}
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+                  
+                  {/* Columna Izquierda: Información General y Precios (7 cols) */}
+                  <div className="lg:col-span-7 space-y-6">
+                    {/* Panel 1: Catálogo e Identificación */}
+                    <div className="bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4 shadow-inner">
+                      <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-2 border-b border-slate-800/80">
+                        <Package className="w-4 h-4" />
+                        <span>1. Información del Producto & Catálogo</span>
                       </div>
 
-                      {/* Columna 2 (Venta) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Código SKU Único *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ej. PROD-005"
+                            value={newSku}
+                            onChange={(e) => setNewSku(e.target.value)}
+                            className="w-full h-11 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Categoría</label>
+                          <input
+                            type="text"
+                            placeholder="General (ej. Electrónica, Accesorios)"
+                            value={newCategory}
+                            onChange={(e) => setNewCategory(e.target.value)}
+                            className="w-full h-11 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                          />
+                        </div>
+                      </div>
+
                       <div>
-                        <div className="flex items-center justify-between h-6 mb-1.5">
-                          <label className="text-xs font-semibold text-emerald-400 uppercase">
-                            {pricingMode === 'fixed' ? 'Precio Venta (Q) *' : 'Margen (%) *'}
-                          </label>
-                          <div className="inline-flex bg-slate-900 p-0.5 rounded border border-slate-700 text-[10px]">
+                        <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Nombre del Producto *</label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ej. Audífonos Bluetooth Pro / Smartphone 128GB"
+                          value={newName}
+                          onChange={(e) => setNewName(e.target.value)}
+                          className="w-full h-11 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Panel 2: Precios Comerciales */}
+                    <div className="bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4 shadow-inner">
+                      {/* Cabecera de Precios con selector de modalidad en línea limpia separada */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800/80 gap-3">
+                        <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider">
+                          <DollarSign className="w-4 h-4" />
+                          <span>2. Estructura de Precios Comerciales (Q)</span>
+                        </div>
+
+                        {/* Switch / Tabs limpio para selector de Fijo (Q) / Margen (%) */}
+                        <div className="flex items-center gap-2 self-start sm:self-auto">
+                          <span className="text-[11px] text-slate-400 font-medium">Modalidad:</span>
+                          <div className="inline-flex bg-slate-900 p-0.5 rounded-xl border border-slate-700/80 text-xs">
                             <button
                               type="button"
                               onClick={() => setPricingMode('fixed')}
-                              className={`px-1.5 py-0.5 rounded cursor-pointer transition ${
+                              className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
                                 pricingMode === 'fixed'
-                                  ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm'
                                   : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
@@ -920,9 +917,9 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                             <button
                               type="button"
                               onClick={() => setPricingMode('margin')}
-                              className={`px-1.5 py-0.5 rounded cursor-pointer transition ${
+                              className={`px-3 py-1 rounded-lg text-xs font-semibold cursor-pointer transition-all ${
                                 pricingMode === 'margin'
-                                  ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                                  ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-sm'
                                   : 'text-slate-400 hover:text-slate-200'
                               }`}
                             >
@@ -930,112 +927,173 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                             </button>
                           </div>
                         </div>
+                      </div>
 
-                        {pricingMode === 'fixed' ? (
-                          <>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-start">
+                        {/* Costo */}
+                        <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-2">
+                          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                            Precio de Costo (Q) *
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-slate-500 font-bold text-sm">
+                              Q
+                            </span>
                             <input
                               type="number"
                               step="0.01"
                               min="0"
                               required
-                              value={newSalePrice}
-                              onChange={(e) => setNewSalePrice(e.target.value)}
-                              className="h-10 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none"
+                              value={newUnitCost}
+                              onChange={(e) => setNewUnitCost(e.target.value)}
+                              className="w-full h-11 pl-9 pr-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                              placeholder="0.00"
                             />
-                            {(() => {
-                              const cost = parseFloat(newUnitCost) || 0;
-                              const sale = parseFloat(newSalePrice) || 0;
-                              const profit = sale - cost;
-                              const pct = cost > 0 ? (profit / cost) * 100 : 0;
-                              return (
-                                <div className="h-4 mt-1 text-[11px] text-slate-400 font-mono truncate">
-                                  Ganancia: Q {profit.toFixed(2)} ({pct.toFixed(1)}%)
-                                </div>
-                              );
-                            })()}
-                          </>
-                        ) : (
-                          <>
-                            <input
-                              type="number"
-                              step="0.1"
-                              min="0"
-                              required
-                              value={marginPercent}
-                              onChange={(e) => setMarginPercent(e.target.value)}
-                              className="h-10 w-full rounded-lg bg-slate-950 border border-emerald-500/40 px-3 text-sm text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none"
-                            />
-                            {(() => {
-                              const cost = parseFloat(newUnitCost) || 0;
-                              const margin = parseFloat(marginPercent) || 0;
-                              const calcSale = cost * (1 + margin / 100);
-                              return (
-                                <div className="h-4 mt-1 text-[11px] text-emerald-400 font-mono font-semibold truncate">
-                                  Precio resultante: Q {calcSale.toFixed(2)}
-                                </div>
-                              );
-                            })()}
-                          </>
-                        )}
+                          </div>
+                          <p className="text-[11px] text-slate-500">Costo unitario de compra o importación</p>
+                        </div>
+
+                        {/* Venta / Margen */}
+                        <div className="bg-emerald-950/15 border border-emerald-500/20 p-4 rounded-xl space-y-2">
+                          <label className="block text-xs font-semibold text-emerald-400 uppercase tracking-wide">
+                            {pricingMode === 'fixed' ? 'Precio Venta al Público (Q) *' : 'Porcentaje de Margen deseado (%) *'}
+                          </label>
+
+                          {pricingMode === 'fixed' ? (
+                            <>
+                              <div className="relative">
+                                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-emerald-500 font-bold text-sm">
+                                  Q
+                                </span>
+                                <input
+                                  type="number"
+                                  step="0.01"
+                                  min="0"
+                                  required
+                                  value={newSalePrice}
+                                  onChange={(e) => setNewSalePrice(e.target.value)}
+                                  className="w-full h-11 pl-9 pr-3.5 bg-slate-950 border border-emerald-500/40 rounded-xl text-emerald-300 font-mono text-sm focus:border-emerald-500 focus:outline-none transition-colors"
+                                  placeholder="0.00"
+                                />
+                              </div>
+                              {(() => {
+                                const cost = parseFloat(newUnitCost) || 0;
+                                const sale = parseFloat(newSalePrice) || 0;
+                                const profit = sale - cost;
+                                const pct = cost > 0 ? (profit / cost) * 100 : 0;
+                                return (
+                                  <div className="text-[11px] font-mono flex items-center justify-between text-slate-400 pt-0.5">
+                                    <span>Ganancia estimada:</span>
+                                    <span className={`font-bold ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                      Q {profit.toFixed(2)} ({pct.toFixed(1)}%)
+                                    </span>
+                                  </div>
+                                );
+                              })()}
+                            </>
+                          ) : (
+                            <>
+                              <div className="relative">
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  min="0"
+                                  required
+                                  value={marginPercent}
+                                  onChange={(e) => setMarginPercent(e.target.value)}
+                                  className="w-full h-11 px-3.5 pr-8 bg-slate-950 border border-emerald-500/40 rounded-xl text-emerald-300 font-mono text-sm focus:border-emerald-500 focus:outline-none transition-colors"
+                                  placeholder="30"
+                                />
+                                <span className="absolute right-3.5 top-1/2 -translate-y-1/2 font-mono text-emerald-500 font-bold text-sm">
+                                  %
+                                </span>
+                              </div>
+                              {(() => {
+                                const cost = parseFloat(newUnitCost) || 0;
+                                const margin = parseFloat(marginPercent) || 0;
+                                const calcSale = cost * (1 + margin / 100);
+                                return (
+                                  <div className="text-[11px] font-mono flex items-center justify-between text-emerald-400 pt-0.5">
+                                    <span className="text-slate-400">Precio resultante:</span>
+                                    <span className="font-bold">Q {calcSale.toFixed(2)}</span>
+                                  </div>
+                                );
+                              })()}
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Columna Derecha: Distribución Inicial de Stock */}
-                <div className="lg:col-span-6 space-y-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5">
-                  <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
-                    <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-2">
-                      <Building2 className="w-4 h-4" />
-                      3. Distribución Inicial de Stock Físico
-                    </span>
-                    <span className="text-[11px] font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 font-mono">
-                      Stock Total Inicial: {totalInitialStockInModal} uds
-                    </span>
-                  </div>
+                  {/* Columna Derecha: Distribución Inicial de Stock Físico (5 cols) */}
+                  <div className="lg:col-span-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-5 shadow-inner">
+                    {/* Cabecera con Badge destacado de Stock Total Inicial */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800/80 gap-2">
+                      <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-2">
+                        <Building2 className="w-4 h-4" />
+                        3. Existencias Iniciales Físicas
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 font-mono">
+                        <span>Stock Inicial:</span>
+                        <strong className="text-sm">{totalInitialStockInModal}</strong>
+                        <span>uds</span>
+                      </span>
+                    </div>
 
-                  <p className="text-xs text-slate-400">
-                    Ingresa la cantidad inicial de unidades físicas asignadas a cada una de las sucursales:
-                  </p>
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Asigna la cantidad de existencias físicas iniciales con las que se dará de alta este producto en cada sucursal:
+                    </p>
 
-                  <div className="space-y-3">
-                    {stores.map(store => (
-                      <div key={store.id} className="bg-slate-900 border border-slate-800 p-4 rounded-xl flex items-center justify-between gap-4">
-                        <div className="flex items-center gap-3">
-                          <div className="p-2.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                            <Building2 className="w-4 h-4" />
+                    {/* Filas compactas y ordenadas de Tienda 1, Tienda 2 y Tienda 3 */}
+                    <div className="space-y-3">
+                      {stores.map(store => (
+                        <div
+                          key={store.id}
+                          className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-3 sm:p-3.5 rounded-xl flex items-center justify-between gap-4 transition-colors"
+                        >
+                          {/* Izquierda: Ícono + nombre/sucursal */}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                              <Building2 className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-bold text-white text-xs sm:text-sm block truncate">{store.name}</span>
+                              <span className="text-[10px] text-slate-400 font-mono block">Sucursal: {store.id}</span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-bold text-slate-200 text-xs block">{store.name}</span>
-                            <span className="text-[10px] text-slate-500 font-mono">Sucursal: {store.id}</span>
+
+                          {/* Derecha: Input numérico con ancho fijo adecuado (w-28 o w-32) */}
+                          <div className="w-28 sm:w-32 shrink-0">
+                            <input
+                              type="number"
+                              min="0"
+                              value={newInitialStocks[store.id] ?? 0}
+                              onChange={e => setNewInitialStocks({
+                                ...newInitialStocks,
+                                [store.id]: Math.max(0, parseInt(e.target.value, 10) || 0)
+                              })}
+                              className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-sm text-center focus:border-indigo-500 focus:outline-none transition-colors"
+                              placeholder="0"
+                            />
                           </div>
                         </div>
+                      ))}
+                    </div>
 
-                        <div className="w-36">
-                          <input
-                            type="number"
-                            min="0"
-                            value={newInitialStocks[store.id] ?? 0}
-                            onChange={e => setNewInitialStocks({
-                              ...newInitialStocks,
-                              [store.id]: Math.max(0, parseInt(e.target.value, 10) || 0)
-                            })}
-                            className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono text-sm text-right focus:border-indigo-500 focus:outline-none"
-                            placeholder="0"
-                          />
-                        </div>
-                      </div>
-                    ))}
+                    <div className="p-3.5 bg-indigo-950/20 border border-indigo-500/20 rounded-xl text-xs text-indigo-300/90 flex items-start gap-2.5 mt-4">
+                      <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                      <span className="leading-relaxed">
+                        El stock ingresado se almacenará directamente en la tabla <strong>store_inventory</strong> como fuente única de verdad.
+                      </span>
+                    </div>
                   </div>
 
-                  <div className="p-3 bg-indigo-950/20 border border-indigo-500/20 rounded-xl text-[11px] text-indigo-300/80 flex items-start gap-2.5">
-                    <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
-                    <span>El stock ingresado se almacenará directamente en la tabla <strong>store_inventory</strong> como fuente única de verdad.</span>
-                  </div>
                 </div>
               </div>
 
-              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800 shrink-0">
+              {/* 3. Footer Fijo Inferior */}
+              <div className="p-4 border-t border-slate-700/50 flex items-center justify-end gap-4 bg-slate-900/90 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowAddProductModal(false)}
@@ -1046,7 +1104,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                 <button
                   type="submit"
                   disabled={isSavingProduct}
-                  className="h-10 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                  className="h-10 px-7 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/25 cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
                   <Check className="w-4 h-4" />
                   <span>{isSavingProduct ? 'Guardando...' : 'Guardar Producto'}</span>

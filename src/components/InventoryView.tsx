@@ -1027,157 +1027,240 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
       )}
 
       {/* Modal Add New Product / SKU directly */}
+      {/* Modal Add New Product / SKU directly */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[100000] flex items-center justify-center p-3 sm:p-6">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in duration-200">
-            <div className="flex justify-between items-center border-b border-slate-800 pb-4 shrink-0">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-2 sm:p-4">
+          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[96vw] max-w-7xl h-[92vh] max-h-[92vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in duration-200">
+            {/* 1. Header Fijo Superior */}
+            <div className="px-6 py-4 border-b border-slate-800 bg-slate-900/95 flex items-center justify-between shrink-0">
               <div className="flex items-center space-x-3">
-                <h3 className="font-black text-white text-lg sm:text-xl tracking-tight">Registrar Nuevo Producto / SKU</h3>
-                {(name.trim() !== '' || sku.trim() !== '') && (
-                  <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20">
-                    📝 Borrador autoguardado
-                  </span>
-                )}
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                  <Package className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex items-center space-x-2">
+                    <h3 className="font-black text-white text-lg sm:text-xl tracking-tight">Registrar Nuevo Producto / SKU</h3>
+                    {(name.trim() !== '' || sku.trim() !== '') && (
+                      <span className="text-xs font-semibold text-amber-400 bg-amber-500/10 px-2.5 py-0.5 rounded border border-amber-500/20">
+                        📝 Borrador autoguardado
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-400 mt-0.5">
+                    Crea el producto en el catálogo maestro y asigna existencias físicas iniciales por sucursal
+                  </p>
+                </div>
               </div>
-              <button onClick={() => setShowAddModal(false)} className="text-slate-400 hover:text-white text-lg font-bold transition-colors">✕</button>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+                title="Cerrar modal"
+              >
+                <X className="w-5 h-5" />
+              </button>
             </div>
 
-            {errorMessage && (
-              <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs p-3.5 rounded-xl font-medium shrink-0">
-                {errorMessage}
-              </div>
-            )}
-
-            {invNetworkError && (
-              <div className="p-3.5 bg-rose-500/15 border border-rose-500/40 rounded-xl text-rose-300 text-xs flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in shrink-0">
-                <div className="flex items-center space-x-2">
-                  <AlertCircle className="w-5 h-5 shrink-0 text-rose-400" />
-                  <span className="font-semibold">{invNetworkError}</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleCreateProduct()}
-                  disabled={isSavingProduct}
-                  className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs transition shadow shrink-0 cursor-pointer flex items-center space-x-1"
-                >
-                  <span>{isSavingProduct ? 'Guardando...' : '🔄 Reintentar Guardar'}</span>
-                </button>
-              </div>
-            )}
-
-            <form onSubmit={handleCreateProduct} className="space-y-6 text-xs">
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                {/* Columna Izquierda: Información del Producto y Precios (7 cols) */}
-                <div className="lg:col-span-7 bg-slate-950/60 border border-slate-800 rounded-2xl p-5 space-y-4">
-                  <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider block border-b border-slate-800 pb-2">
-                    Información General y Comercial
-                  </span>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-slate-400 font-semibold uppercase mb-1">Código SKU Único *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ej. PROD-005"
-                        value={sku}
-                        onChange={(e) => setSku(e.target.value)}
-                        className="w-full h-10 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-indigo-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-slate-400 font-semibold uppercase mb-1 truncate">Categoría</label>
-                      <input
-                        type="text"
-                        placeholder="General"
-                        value={category}
-                        onChange={(e) => setCategory(e.target.value)}
-                        className="w-full h-10 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
-                      />
-                    </div>
+            {/* Formulario que contiene cuerpo central scrolleable y footer fijo */}
+            <form onSubmit={handleCreateProduct} className="flex-1 flex flex-col min-h-0">
+              {/* 2. Cuerpo Central Scrolleable */}
+              <div className="flex-1 overflow-y-auto p-6 sm:p-8 space-y-6">
+                {errorMessage && (
+                  <div className="bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs p-3.5 rounded-xl font-medium shrink-0">
+                    {errorMessage}
                   </div>
+                )}
 
-                  <div>
-                    <label className="block text-slate-400 font-semibold uppercase mb-1">Nombre del Producto *</label>
-                    <input
-                      type="text"
-                      required
-                      placeholder="Ej. Audífonos Bluetooth Pro / Smartphone"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      className="w-full h-10 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-                    <div>
-                      <label className="block text-slate-400 font-semibold uppercase mb-1 truncate">PRECIO DE COSTO (Q) *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        required
-                        value={unitCost}
-                        onChange={(e) => setUnitCost(e.target.value)}
-                        className="w-full h-10 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-indigo-500 focus:outline-none"
-                      />
+                {invNetworkError && (
+                  <div className="p-3.5 bg-rose-500/15 border border-rose-500/40 rounded-xl text-rose-300 text-xs flex flex-col sm:flex-row items-center justify-between gap-3 animate-in fade-in shrink-0">
+                    <div className="flex items-center space-x-2">
+                      <AlertCircle className="w-5 h-5 shrink-0 text-rose-400" />
+                      <span className="font-semibold">{invNetworkError}</span>
                     </div>
-                    <div>
-                      <label className="block text-slate-400 font-semibold uppercase mb-1 truncate">PRECIO DE VENTA (Q) *</label>
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        required
-                        value={salePrice}
-                        onChange={(e) => setSalePrice(e.target.value)}
-                        className="w-full h-10 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono focus:border-indigo-500 focus:outline-none"
-                      />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleCreateProduct()}
+                      disabled={isSavingProduct}
+                      className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-lg text-xs transition shadow shrink-0 cursor-pointer flex items-center space-x-1"
+                    >
+                      <span>{isSavingProduct ? 'Guardando...' : '🔄 Reintentar Guardar'}</span>
+                    </button>
                   </div>
-                </div>
+                )}
 
-                {/* Columna Derecha: Distribución Inicial de Stock (5 cols) */}
-                <div className="lg:col-span-5 bg-slate-950/60 border border-slate-700/80 p-5 rounded-2xl space-y-4 shadow-inner">
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                      <Building2 className="w-4 h-4" />
-                      DISTRIBUCIÓN INICIAL DE STOCK
-                    </span>
-                    <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 font-mono">
-                      Total: {totalInitialStock} uds
-                    </span>
-                  </div>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
+                  {/* Columna Izquierda: Información del Producto y Precios (7 cols) */}
+                  <div className="lg:col-span-7 space-y-6">
+                    <div className="bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4 shadow-inner">
+                      <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider block border-b border-slate-800 pb-2">
+                        1. Información General y Catálogo
+                      </span>
 
-                  <p className="text-slate-400 text-xs leading-relaxed">
-                    Asigna las existencias físicas iniciales con las que se dará de alta este producto en cada tienda:
-                  </p>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Código SKU Único *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ej. PROD-005"
+                            value={sku}
+                            onChange={(e) => setSku(e.target.value)}
+                            className="w-full h-11 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white font-mono text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                          />
+                        </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-1 gap-3">
-                    {storesList.map(store => (
-                      <div key={store.id} className="bg-slate-900/90 border border-slate-800 p-3 rounded-xl flex items-center justify-between gap-3">
-                        <label className="text-xs font-semibold text-slate-300 block truncate">
-                          {store.name}
-                        </label>
+                        <div>
+                          <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs truncate">Categoría</label>
+                          <input
+                            type="text"
+                            placeholder="General"
+                            value={category}
+                            onChange={(e) => setCategory(e.target.value)}
+                            className="w-full h-11 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                          />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Nombre del Producto *</label>
                         <input
-                          type="number"
-                          min="0"
-                          value={initialStocks[store.id] ?? 0}
-                          onChange={e => setInitialStocks({
-                            ...initialStocks,
-                            [store.id]: Math.max(0, parseInt(e.target.value, 10) || 0)
-                          })}
-                          className="w-24 h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono text-xs text-right focus:border-indigo-500 focus:outline-none"
+                          type="text"
+                          required
+                          placeholder="Ej. Audífonos Bluetooth Pro / Smartphone"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          className="w-full h-11 px-3.5 bg-slate-900 border border-slate-700 rounded-xl text-white text-sm focus:border-indigo-500 focus:outline-none transition-colors"
                         />
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4 shadow-inner">
+                      <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider block border-b border-slate-800 pb-2">
+                        2. Estructura de Precios Comerciales (Q)
+                      </span>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-start">
+                        <div className="bg-slate-900/60 border border-slate-800 p-4 rounded-xl space-y-2">
+                          <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wide">
+                            PRECIO DE COSTO (Q) *
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-slate-500 font-bold text-sm">
+                              Q
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              required
+                              value={unitCost}
+                              onChange={(e) => setUnitCost(e.target.value)}
+                              className="w-full h-11 pl-9 pr-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                            />
+                          </div>
+                          <p className="text-[11px] text-slate-500">Costo unitario de compra o importación</p>
+                        </div>
+
+                        <div className="bg-emerald-950/15 border border-emerald-500/20 p-4 rounded-xl space-y-2">
+                          <label className="block text-xs font-semibold text-emerald-400 uppercase tracking-wide">
+                            PRECIO DE VENTA (Q) *
+                          </label>
+                          <div className="relative">
+                            <span className="absolute left-3.5 top-1/2 -translate-y-1/2 font-mono text-emerald-500 font-bold text-sm">
+                              Q
+                            </span>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              required
+                              value={salePrice}
+                              onChange={(e) => setSalePrice(e.target.value)}
+                              className="w-full h-11 pl-9 pr-3.5 bg-slate-950 border border-emerald-500/40 rounded-xl text-emerald-300 font-mono text-sm focus:border-emerald-500 focus:outline-none transition-colors"
+                            />
+                          </div>
+                          {(() => {
+                            const cost = parseFloat(unitCost) || 0;
+                            const sale = parseFloat(salePrice) || 0;
+                            const profit = sale - cost;
+                            const pct = cost > 0 ? (profit / cost) * 100 : 0;
+                            return (
+                              <div className="text-[11px] font-mono flex items-center justify-between text-slate-400 pt-0.5">
+                                <span>Ganancia estimada:</span>
+                                <span className={`font-bold ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                  Q {profit.toFixed(2)} ({pct.toFixed(1)}%)
+                                </span>
+                              </div>
+                            );
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Columna Derecha: Distribución Inicial de Stock (5 cols) */}
+                  <div className="lg:col-span-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-5 shadow-inner">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-3 border-b border-slate-800/80 gap-2">
+                      <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-1.5">
+                        <Building2 className="w-4 h-4" />
+                        3. Existencias Iniciales Físicas
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3 py-1 rounded-full border border-emerald-500/20 font-mono">
+                        <span>Stock Inicial:</span>
+                        <strong className="text-sm">{totalInitialStock}</strong>
+                        <span>uds</span>
+                      </span>
+                    </div>
+
+                    <p className="text-xs text-slate-400 leading-relaxed">
+                      Asigna las existencias físicas iniciales con las que se dará de alta este producto en cada tienda:
+                    </p>
+
+                    <div className="space-y-3">
+                      {storesList.map(store => (
+                        <div
+                          key={store.id}
+                          className="bg-slate-900 border border-slate-800 hover:border-slate-700/80 p-3 sm:p-3.5 rounded-xl flex items-center justify-between gap-4 transition-colors"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                              <Building2 className="w-4 h-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <span className="font-bold text-white text-xs sm:text-sm block truncate">{store.name}</span>
+                              <span className="text-[10px] text-slate-400 font-mono block">Sucursal: {store.id}</span>
+                            </div>
+                          </div>
+
+                          <div className="w-28 sm:w-32 shrink-0">
+                            <input
+                              type="number"
+                              min="0"
+                              value={initialStocks[store.id] ?? 0}
+                              onChange={e => setInitialStocks({
+                                ...initialStocks,
+                                [store.id]: Math.max(0, parseInt(e.target.value, 10) || 0)
+                              })}
+                              className="w-full h-10 px-3 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-sm text-center focus:border-indigo-500 focus:outline-none transition-colors"
+                              placeholder="0"
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="p-3.5 bg-indigo-950/20 border border-indigo-500/20 rounded-xl text-xs text-indigo-300/90 flex items-start gap-2.5 mt-4">
+                      <AlertCircle className="w-4 h-4 text-indigo-400 shrink-0 mt-0.5" />
+                      <span className="leading-relaxed">
+                        El stock ingresado se almacenará directamente en la tabla <strong>store_inventory</strong> como fuente única de verdad.
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Botones inferiores */}
-              <div className="flex items-center justify-end space-x-3 pt-4 border-t border-slate-800 shrink-0">
+              {/* 3. Footer Fijo Inferior */}
+              <div className="p-4 border-t border-slate-700/50 flex items-center justify-end gap-4 bg-slate-900/90 shrink-0">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
@@ -1188,9 +1271,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
                 <button
                   type="submit"
                   disabled={isSavingProduct}
-                  className="h-10 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/20 cursor-pointer disabled:opacity-50"
+                  className="h-10 px-7 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/25 cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
-                  {isSavingProduct ? 'Guardando...' : 'Guardar Producto'}
+                  <Check className="w-4 h-4" />
+                  <span>{isSavingProduct ? 'Guardando...' : 'Guardar Producto'}</span>
                 </button>
               </div>
             </form>
