@@ -1865,179 +1865,192 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
       {/* MODAL 6: DETALLE AMPLIO DE TRASLADO */}
       {selectedDetailTransfer && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-[100000] flex items-center justify-center p-4">
-          <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-[95vw] max-w-6xl max-h-[90vh] overflow-y-auto p-6 sm:p-8 shadow-2xl space-y-6 animate-in fade-in duration-200">
-            {/* Header */}
-            <div className="flex items-start justify-between border-b border-slate-800 pb-4">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-3">
-                  <h3 className="font-extrabold text-white text-xl sm:text-2xl flex items-center gap-2.5">
-                    <ArrowRightLeft className="w-6 h-6 text-indigo-400" />
-                    Traslado #{selectedDetailTransfer.id}
-                  </h3>
-                  {selectedDetailTransfer.status === 'en_transito' ? (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>En Tránsito</span>
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                      <CheckCircle2 className="w-3.5 h-3.5" />
-                      <span>Completado</span>
-                    </span>
-                  )}
+        <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0 rounded-none border-none animate-in fade-in duration-150">
+          {/* 1. Header fijo superior */}
+          <div className="w-full px-8 py-5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
+            <div className="space-y-1.5">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                  <ArrowRightLeft className="w-5 h-5" />
                 </div>
-                <div className="text-xs text-slate-400 flex flex-wrap gap-5 font-mono pt-1">
+                <h3 className="font-extrabold text-white text-xl sm:text-2xl tracking-tight">
+                  Traslado #{selectedDetailTransfer.id}
+                </h3>
+                {selectedDetailTransfer.status === 'en_transito' ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-amber-500/10 text-amber-400 border border-amber-500/20 font-mono">
+                    <Clock className="w-3.5 h-3.5" />
+                    <span>En Tránsito</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                    <span>Completado</span>
+                  </span>
+                )}
+              </div>
+              <div className="text-xs text-slate-400 flex flex-wrap gap-5 font-mono pt-0.5">
+                <span>
+                  <strong className="text-slate-300">Fecha de Creación:</strong>{' '}
+                  {new Date(selectedDetailTransfer.created_at).toLocaleString('es-GT', {
+                    dateStyle: 'medium',
+                    timeStyle: 'short'
+                  })}
+                </span>
+                {selectedDetailTransfer.received_at && (
                   <span>
-                    <strong className="text-slate-300">Fecha de Creación:</strong>{' '}
-                    {new Date(selectedDetailTransfer.created_at).toLocaleString('es-GT', {
+                    <strong className="text-emerald-400">Fecha de Recepción:</strong>{' '}
+                    {new Date(selectedDetailTransfer.received_at).toLocaleString('es-GT', {
                       dateStyle: 'medium',
                       timeStyle: 'short'
                     })}
                   </span>
-                  {selectedDetailTransfer.received_at && (
-                    <span>
-                      <strong className="text-emerald-400">Fecha de Recepción:</strong>{' '}
-                      {new Date(selectedDetailTransfer.received_at).toLocaleString('es-GT', {
-                        dateStyle: 'medium',
-                        timeStyle: 'short'
-                      })}
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <button
-                onClick={() => setSelectedDetailTransfer(null)}
-                className="text-slate-400 hover:text-white p-2 rounded-xl hover:bg-slate-800 transition cursor-pointer"
-                title="Cerrar modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Flujo de Ruta (Visual destacado a todo lo ancho) */}
-            <div className="bg-slate-950/80 border border-slate-800 p-5 rounded-2xl space-y-3">
-              <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-                <Building2 className="w-4 h-4" />
-                Ruta de Traslado entre Sucursales
-              </span>
-              <div className="grid grid-cols-1 md:grid-cols-11 gap-4 items-center bg-slate-900 border border-slate-800 p-5 rounded-xl">
-                {/* Origen */}
-                <div className="md:col-span-5 text-center sm:text-left space-y-1.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Origen (Salida de Stock)</span>
-                  <div className="font-extrabold text-base text-slate-100 flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-emerald-400 shrink-0" />
-                    <span>{selectedDetailTransfer.from_store_name || getStoreName(selectedDetailTransfer.from_store_id)}</span>
-                  </div>
-                </div>
-
-                {/* Flecha indicadora central */}
-                <div className="md:col-span-1 flex flex-col items-center justify-center py-2">
-                  <div className="p-3 bg-indigo-600/20 text-indigo-400 rounded-full border border-indigo-500/30 shadow-lg shadow-indigo-600/10">
-                    <ArrowRight className="w-5 h-5" />
-                  </div>
-                  <span className="text-[10px] text-indigo-400 font-mono mt-1 font-bold">Traslado</span>
-                </div>
-
-                {/* Destino */}
-                <div className="md:col-span-5 text-center sm:text-left space-y-1.5 p-3 rounded-xl bg-slate-950/60 border border-slate-800">
-                  <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Destino (Entrada de Stock)</span>
-                  <div className="font-extrabold text-base text-slate-100 flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-indigo-400 shrink-0" />
-                    <span>{selectedDetailTransfer.to_store_name || getStoreName(selectedDetailTransfer.to_store_id)}</span>
-                  </div>
-                </div>
+                )}
               </div>
             </div>
 
-            {/* Tabla / Lista de Productos Trasladados Amplia */}
-            <div className="bg-slate-950/80 border border-slate-800 rounded-2xl overflow-hidden shadow-inner">
-              <div className="p-4 bg-slate-900 border-b border-slate-800 flex items-center justify-between">
+            <button
+              type="button"
+              onClick={() => setSelectedDetailTransfer(null)}
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition cursor-pointer"
+              title="Volver al Inventario (Esc)"
+            >
+              <X className="w-4 h-4" />
+              <span>Volver al Inventario</span>
+            </button>
+          </div>
+
+          {/* 2. Cuerpo central scrolleable */}
+          <div className="flex-1 w-full px-8 py-8 overflow-y-auto space-y-6">
+            <div className="max-w-7xl mx-auto space-y-6">
+              
+              {/* Ruta de Traslado: Tarjetas amplias de origen y destino con la flecha central */}
+              <div className="bg-slate-900/70 border border-slate-800/90 p-6 rounded-2xl space-y-4 shadow-inner">
                 <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-                  <Boxes className="w-4 h-4" />
-                  Productos y Cantidades Trasladadas
+                  <Building2 className="w-4 h-4" />
+                  Ruta de Traslado entre Sucursales
                 </span>
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3.5 py-1 rounded-full border border-emerald-500/20 font-mono">
-                  Total de Unidades: {selectedDetailTransfer.items?.reduce((sum, item) => sum + item.quantity, 0) || 0} piezas
-                </span>
+                <div className="grid grid-cols-1 md:grid-cols-11 gap-4 items-center bg-slate-950/70 border border-slate-800 p-5 rounded-xl">
+                  {/* Origen */}
+                  <div className="md:col-span-5 text-center sm:text-left space-y-1.5 p-4 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Origen (Salida de Stock)</span>
+                    <div className="font-extrabold text-base sm:text-lg text-slate-100 flex items-center gap-2.5">
+                      <Building2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                      <span>{selectedDetailTransfer.from_store_name || getStoreName(selectedDetailTransfer.from_store_id)}</span>
+                    </div>
+                  </div>
+
+                  {/* Flecha indicadora central */}
+                  <div className="md:col-span-1 flex flex-col items-center justify-center py-2">
+                    <div className="p-3 bg-indigo-600/20 text-indigo-400 rounded-full border border-indigo-500/30 shadow-lg shadow-indigo-600/10">
+                      <ArrowRight className="w-5 h-5" />
+                    </div>
+                    <span className="text-[10px] text-indigo-400 font-mono mt-1 font-bold">Traslado</span>
+                  </div>
+
+                  {/* Destino */}
+                  <div className="md:col-span-5 text-center sm:text-left space-y-1.5 p-4 rounded-xl bg-slate-900 border border-slate-800">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Destino (Entrada de Stock)</span>
+                    <div className="font-extrabold text-base sm:text-lg text-slate-100 flex items-center gap-2.5">
+                      <Building2 className="w-5 h-5 text-indigo-400 shrink-0" />
+                      <span>{selectedDetailTransfer.to_store_name || getStoreName(selectedDetailTransfer.to_store_id)}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              <div className="overflow-x-auto w-full">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-900/90 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800">
-                    <tr>
-                      <th className="py-3 px-6 w-48">Código SKU</th>
-                      <th className="py-3 px-6">Descripción del Producto</th>
-                      <th className="py-3 px-6 text-right w-56">Cantidad Trasladada</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-800/70 text-slate-200">
-                    {selectedDetailTransfer.items && selectedDetailTransfer.items.length > 0 ? (
-                      selectedDetailTransfer.items.map((item, idx) => (
-                        <tr key={idx} className="hover:bg-slate-900/50 transition-colors">
-                          <td className="py-4 px-6 font-mono font-bold text-indigo-400 text-sm">
-                            {item.sku || `PROD-${item.product_id}`}
-                          </td>
-                          <td className="py-4 px-6 font-semibold text-white text-sm">
-                            {item.product_name || `Producto #${item.product_id}`}
-                          </td>
-                          <td className="py-4 px-6 text-right font-mono font-extrabold text-emerald-400 text-base">
-                            {item.quantity} <span className="text-xs text-slate-400 font-normal">uds</span>
+              {/* Tabla de Productos Trasladados a todo el ancho */}
+              <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl overflow-hidden shadow-inner">
+                <div className="p-5 bg-slate-900/90 border-b border-slate-800 flex items-center justify-between">
+                  <span className="text-xs font-extrabold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                    <Boxes className="w-4 h-4" />
+                    Productos y Cantidades Trasladadas
+                  </span>
+                  <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-3.5 py-1 rounded-full border border-emerald-500/20 font-mono">
+                    Total de Unidades: {selectedDetailTransfer.items?.reduce((sum, item) => sum + item.quantity, 0) || 0} piezas
+                  </span>
+                </div>
+
+                <div className="overflow-x-auto w-full">
+                  <table className="w-full text-left text-xs sm:text-sm">
+                    <thead className="bg-slate-950/80 text-slate-400 font-bold uppercase tracking-wider border-b border-slate-800 text-xs">
+                      <tr>
+                        <th className="py-3.5 px-6 w-48">Código SKU</th>
+                        <th className="py-3.5 px-6">Descripción del Producto</th>
+                        <th className="py-3.5 px-6 text-right w-56">Cantidad Trasladada</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-800/70 text-slate-200">
+                      {selectedDetailTransfer.items && selectedDetailTransfer.items.length > 0 ? (
+                        selectedDetailTransfer.items.map((item, idx) => (
+                          <tr key={idx} className="hover:bg-slate-900/50 transition-colors">
+                            <td className="py-4 px-6 font-mono font-bold text-indigo-400">
+                              {item.sku || `PROD-${item.product_id}`}
+                            </td>
+                            <td className="py-4 px-6 font-semibold text-white">
+                              {item.product_name || `Producto #${item.product_id}`}
+                            </td>
+                            <td className="py-4 px-6 text-right font-mono font-extrabold text-emerald-400 text-base">
+                              {item.quantity} <span className="text-xs text-slate-400 font-normal">uds</span>
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan={3} className="py-8 text-center text-slate-500">
+                            No hay items asociados a este traslado.
                           </td>
                         </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan={3} className="py-8 text-center text-slate-500 text-sm">
-                          No hay items asociados a este traslado.
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
               </div>
-            </div>
 
-            {/* Notas / Observaciones */}
-            <div className="bg-slate-950/80 border border-slate-800 p-4 rounded-xl space-y-1.5">
-              <span className="text-xs font-bold text-slate-400 uppercase block tracking-wider">Notas / Observaciones del Envío:</span>
-              <p className="text-xs text-slate-200 font-mono italic">
-                {selectedDetailTransfer.notes && selectedDetailTransfer.notes.trim() !== ''
-                  ? `"${selectedDetailTransfer.notes}"`
-                  : 'Sin notas adicionales para este traslado.'}
-              </p>
-            </div>
-
-            {/* Footer */}
-            <div className="flex items-center justify-between pt-4 border-t border-slate-800">
-              {selectedDetailTransfer.status === 'en_transito' ? (
-                <button
-                  onClick={() => {
-                    const id = selectedDetailTransfer.id;
-                    setSelectedDetailTransfer(null);
-                    handleReceiveTransfer(id);
-                  }}
-                  disabled={receivingId === selectedDetailTransfer.id}
-                  className="h-10 px-5 inline-flex items-center gap-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-lg shadow-emerald-600/20"
-                >
-                  <CheckCircle2 className="w-4 h-4" />
-                  <span>Confirmar Recepción de Traslado</span>
-                </button>
-              ) : (
-                <span className="text-xs text-emerald-400 font-semibold flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-3.5 py-1.5 rounded-xl font-mono">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Traslado Completado y Recibido en Destino
+              {/* Notas / Observaciones */}
+              <div className="bg-slate-900/70 border border-slate-800/90 p-5 sm:p-6 rounded-2xl space-y-2 shadow-inner">
+                <span className="text-xs font-bold text-slate-400 uppercase block tracking-wider">
+                  Notas / Observaciones del Envío:
                 </span>
-              )}
+                <p className="text-xs sm:text-sm text-slate-200 font-mono italic leading-relaxed">
+                  {selectedDetailTransfer.notes && selectedDetailTransfer.notes.trim() !== ''
+                    ? `"${selectedDetailTransfer.notes}"`
+                    : 'Sin notas adicionales para este traslado.'}
+                </p>
+              </div>
 
-              <button
-                onClick={() => setSelectedDetailTransfer(null)}
-                className="h-10 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold rounded-xl transition cursor-pointer"
-              >
-                Cerrar
-              </button>
             </div>
+          </div>
+
+          {/* 3. Footer fijo inferior */}
+          <div className="w-full px-8 py-4 border-t border-slate-800 bg-slate-900/95 flex justify-end items-center gap-4 shrink-0">
+            {selectedDetailTransfer.status === 'en_transito' ? (
+              <button
+                type="button"
+                onClick={() => {
+                  const id = selectedDetailTransfer.id;
+                  setSelectedDetailTransfer(null);
+                  handleReceiveTransfer(id);
+                }}
+                disabled={receivingId === selectedDetailTransfer.id}
+                className="h-10 px-6 inline-flex items-center gap-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-lg shadow-emerald-600/20 disabled:opacity-50"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Confirmar Recepción de Traslado</span>
+              </button>
+            ) : (
+              <span className="text-xs text-emerald-400 font-semibold flex items-center gap-2 bg-emerald-500/10 border border-emerald-500/20 px-4 py-2 rounded-xl font-mono">
+                <CheckCircle2 className="w-4 h-4" />
+                Traslado Completado y Recibido en Destino
+              </span>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setSelectedDetailTransfer(null)}
+              className="h-10 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition cursor-pointer"
+            >
+              Cerrar
+            </button>
           </div>
         </div>
       )}
