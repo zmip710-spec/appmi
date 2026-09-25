@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import db, { initDb } from './database.js';
+import db, { initDb, pgPool, isPg } from './database.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -1001,8 +1001,8 @@ app.post('/api/inventory/stock-entry', (req, res) => {
   });
 });
 
-// 3. Crear traslado en estado 'en_transito' con transacción SQLite
-app.post('/api/transfers', (req, res) => {
+// 3. Crear traslado en estado 'en_transito' con transacción atómica
+app.post('/api/transfers', async (req, res) => {
   const { from_store_id, to_store_id, items, notes } = req.body;
 
   if (!from_store_id || !to_store_id || !Array.isArray(items) || items.length === 0) {
@@ -1013,6 +1013,85 @@ app.post('/api/transfers', (req, res) => {
     return res.status(400).json({ error: 'La tienda de origen y destino deben ser distintas.' });
   }
 
+  // --- Rama PostgreSQL con Cliente Dedicado y Transacciones Atómicas ---
+  if (isPg && pgPool) {
+    const client = await pgPool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // Paso 1: Validar y bloquear stock en la tienda origen con FOR UPDATE
+      for (const item of items) {
+        const productId = parseInt(item.product_id, 10);
+        const qty = parseInt(item.quantity, 10);
+
+        if (isNaN(productId) || isNaN(qty) || qty <= 0) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({ error: 'Cada item debe incluir un product_id válido y cantidad mayor a cero.' });
+        }
+
+        const stockRes = await client.query(
+          'SELECT stock FROM store_inventory WHERE store_id = $1 AND product_id = $2 FOR UPDATE',
+          [from_store_id, productId]
+        );
+
+        const currentStock = stockRes.rows[0] ? parseInt(stockRes.rows[0].stock, 10) : 0;
+        if (currentStock < qty) {
+          await client.query('ROLLBACK');
+          return res.status(400).json({
+            error: `Stock insuficiente en tienda origen (${from_store_id}) para el producto ID ${productId}. Disponible: ${currentStock}, Solicitado: ${qty}`
+          });
+        }
+      }
+
+      // Paso 2: Descontar stock en tienda origen
+      for (const item of items) {
+        const productId = parseInt(item.product_id, 10);
+        const qty = parseInt(item.quantity, 10);
+
+        await client.query(
+          'UPDATE store_inventory SET stock = store_inventory.stock - $1 WHERE store_id = $2 AND product_id = $3',
+          [qty, from_store_id, productId]
+        );
+      }
+
+      // Paso 3: Insertar encabezado de la transferencia
+      const insertTransferRes = await client.query(
+        "INSERT INTO inventory_transfers (from_store_id, to_store_id, status, notes) VALUES ($1, $2, 'en_transito', $3) RETURNING id",
+        [from_store_id, to_store_id, notes || '']
+      );
+      const transferId = insertTransferRes.rows[0].id;
+
+      // Paso 4: Insertar ítems de la transferencia
+      for (const item of items) {
+        const productId = parseInt(item.product_id, 10);
+        const qty = parseInt(item.quantity, 10);
+
+        await client.query(
+          'INSERT INTO transfer_items (transfer_id, product_id, quantity) VALUES ($1, $2, $3)',
+          [transferId, productId, qty]
+        );
+      }
+
+      await client.query('COMMIT');
+
+      return res.status(201).json({
+        success: true,
+        transfer_id: transferId,
+        from_store_id,
+        to_store_id,
+        status: 'en_transito',
+        message: 'Traslado creado exitosamente en estado en_transito.'
+      });
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      console.error('Error al crear transferencia en PostgreSQL:', err);
+      return res.status(500).json({ error: 'Error al procesar la transferencia: ' + err.message });
+    } finally {
+      client.release();
+    }
+  }
+
+  // --- Rama SQLite (Entorno Local) ---
   const rawDb = (db.getRawDb && db.getRawDb()) || db;
 
   rawDb.serialize(() => {
@@ -1022,7 +1101,6 @@ app.post('/api/transfers', (req, res) => {
       let rollbackTriggered = false;
       let verifiedCount = 0;
 
-      // Paso A: Validar stock suficiente en la tienda de origen para cada item
       items.forEach((item) => {
         if (rollbackTriggered) return;
         const productId = parseInt(item.product_id, 10);
@@ -1064,7 +1142,7 @@ app.post('/api/transfers', (req, res) => {
           const qty = parseInt(item.quantity, 10);
 
           rawDb.run(
-            'UPDATE store_inventory SET stock = stock - ? WHERE store_id = ? AND product_id = ?',
+            'UPDATE store_inventory SET stock = store_inventory.stock - ? WHERE store_id = ? AND product_id = ?',
             [qty, from_store_id, productId],
             (err) => {
               if (err && !rollbackTriggered) {
@@ -1075,7 +1153,6 @@ app.post('/api/transfers', (req, res) => {
 
               updateCount++;
               if (updateCount === items.length && !rollbackTriggered) {
-                // Registrar encabezado de transferencia
                 rawDb.run(
                   "INSERT INTO inventory_transfers (from_store_id, to_store_id, status, notes) VALUES (?, ?, 'en_transito', ?)",
                   [from_store_id, to_store_id, notes || ''],
@@ -1089,7 +1166,6 @@ app.post('/api/transfers', (req, res) => {
                     const transferId = this.lastID;
                     let itemInsertCount = 0;
 
-                    // Registrar items de transferencia
                     items.forEach((item) => {
                       const productId = parseInt(item.product_id, 10);
                       const qty = parseInt(item.quantity, 10);
@@ -1134,14 +1210,94 @@ app.post('/api/transfers', (req, res) => {
   });
 });
 
-// 4. Recepción de traslado (completa la transferencia)
-app.post('/api/transfers/:id/receive', (req, res) => {
+// 4. Recepción de traslado con bloqueo atómico FOR UPDATE y prevención de duplicados
+app.post('/api/transfers/:id/receive', async (req, res) => {
   const transferId = parseInt(req.params.id, 10);
 
   if (isNaN(transferId)) {
     return res.status(400).json({ error: 'ID de transferencia inválido.' });
   }
 
+  // --- Rama PostgreSQL con Cliente Dedicado, Bloqueo FOR UPDATE y ON CONFLICT explícito ---
+  if (isPg && pgPool) {
+    const client = await pgPool.connect();
+    try {
+      await client.query('BEGIN');
+
+      // 1. Bloquear la fila de la transferencia con FOR UPDATE para prevenir condiciones de carrera (doble clic)
+      const transferRes = await client.query(
+        'SELECT id, from_store_id, to_store_id, status FROM inventory_transfers WHERE id = $1 FOR UPDATE',
+        [transferId]
+      );
+
+      if (transferRes.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: 'Transferencia no encontrada.' });
+      }
+
+      const transfer = transferRes.rows[0];
+
+      if (transfer.status !== 'en_transito') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({
+          error: `La transferencia se encuentra en estado '${transfer.status}' y no puede ser recibida.`
+        });
+      }
+
+      const toStoreId = transfer.to_store_id;
+
+      // 2. Obtener los ítems asociados a la transferencia
+      const itemsRes = await client.query(
+        'SELECT product_id, quantity FROM transfer_items WHERE transfer_id = $1',
+        [transferId]
+      );
+
+      if (itemsRes.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'No se encontraron ítems asociados a la transferencia.' });
+      }
+
+      // 3. Incrementar stock en la tienda destino de forma explícita sin ambigüedades
+      for (const item of itemsRes.rows) {
+        const productId = parseInt(item.product_id, 10);
+        const qty = parseInt(item.quantity, 10);
+
+        const upsertQuery = `
+          INSERT INTO store_inventory (store_id, product_id, stock)
+          VALUES ($1, $2, $3)
+          ON CONFLICT (store_id, product_id)
+          DO UPDATE SET stock = store_inventory.stock + EXCLUDED.stock
+        `;
+
+        await client.query(upsertQuery, [toStoreId, productId, qty]);
+      }
+
+      // 4. Actualizar el estado de la transferencia a 'completado'
+      const now = new Date().toISOString();
+      await client.query(
+        "UPDATE inventory_transfers SET status = 'completado', received_at = $1 WHERE id = $2",
+        [now, transferId]
+      );
+
+      await client.query('COMMIT');
+
+      return res.json({
+        success: true,
+        transfer_id: transferId,
+        status: 'completado',
+        received_at: now,
+        message: 'Recepción de transferencia completada exitosamente.'
+      });
+    } catch (err) {
+      await client.query('ROLLBACK').catch(() => {});
+      console.error('Error al recepcionar transferencia en PostgreSQL:', err);
+      return res.status(500).json({ error: 'Error al recepcionar transferencia: ' + err.message });
+    } finally {
+      client.release();
+    }
+  }
+
+  // --- Rama SQLite (Entorno Local) ---
   const rawDb = (db.getRawDb && db.getRawDb()) || db;
 
   rawDb.serialize(() => {

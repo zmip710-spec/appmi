@@ -651,4 +651,6 @@ const db = {
   }
 };
 
+export { pgPool, isPg };
 export default db;
+
