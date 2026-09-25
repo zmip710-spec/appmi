@@ -17,7 +17,9 @@ import {
   Pencil,
   Check,
   DollarSign,
-  AlertCircle
+  AlertCircle,
+  Store as StoreIcon,
+  PackageCheck
 } from 'lucide-react';
 import {
   fetchStoresApi,
@@ -1128,13 +1130,13 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
           style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
         >
           {/* 1. Header fijo superior */}
-          <div className="w-full px-8 py-5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
+          <div className="w-full px-6 py-3.5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+              <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
                 <ArrowRightLeft className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="font-extrabold text-white text-lg sm:text-xl tracking-tight">
+                <h3 className="font-extrabold text-white text-base sm:text-lg tracking-tight">
                   Crear Traslado entre Tiendas
                 </h3>
                 <p className="text-xs text-slate-400 mt-0.5">
@@ -1145,10 +1147,10 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
             <button
               type="button"
               onClick={() => setShowTransferModal(false)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition cursor-pointer"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition cursor-pointer"
               title="Volver al Inventario (Esc)"
             >
-              <X className="w-4 h-4" />
+              <X className="w-4 h-4 text-slate-400" />
               <span>Volver al Inventario</span>
             </button>
           </div>
@@ -1156,22 +1158,22 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
           {/* Formulario que contiene cuerpo central scrolleable y footer fijo */}
           <form onSubmit={handleCreateTransfer} className="flex-1 flex flex-col min-h-0 w-full m-0 p-0">
             {/* 2. Cuerpo central scrolleable */}
-            <div className="flex-1 w-full px-8 py-8 overflow-y-auto">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto w-full items-start">
+            <div className="flex-1 w-full px-6 py-4 overflow-y-auto">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 max-w-7xl mx-auto w-full items-start">
                 
                 {/* Columna Izquierda: Ruta y Observaciones */}
-                <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-6 sm:p-7 space-y-6 shadow-inner">
-                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-3 border-b border-slate-800/80">
-                    <Building2 className="w-4 h-4" />
-                    <span>1. Ruta de Sucursales</span>
+                <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4 shadow-inner">
+                  <div className="flex items-center gap-2 pb-2.5 border-b border-slate-800/80">
+                    <StoreIcon className="w-4 h-4 text-slate-400" />
+                    <span className="text-slate-200 font-bold text-xs uppercase tracking-wider">1. Ruta de Sucursales</span>
                   </div>
 
                   {/* Selectores de Tienda Origen y Tienda Destino */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 items-start">
-                    <div className="space-y-2">
-                      <label className="font-semibold text-slate-300 uppercase text-xs flex items-center gap-1.5">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                    <div className="space-y-1.5">
+                      <label className="font-medium text-slate-300 text-xs flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-rose-500 inline-block"></span>
-                        Tienda Origen (Salida de Stock) *
+                        Tienda Origen (Salida) *
                       </label>
                       <select
                         value={fromStoreId}
@@ -1183,19 +1185,19 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                             if (other) setToStoreId(other.id);
                           }
                         }}
-                        className="w-full h-11 px-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-medium text-xs sm:text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                        className="w-full h-9 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium text-xs focus:border-indigo-500 focus:outline-none transition-colors"
                       >
                         {stores.map(s => (
                           <option key={s.id} value={s.id}>{s.name} ({s.id})</option>
                         ))}
                       </select>
-                      <p className="text-[11px] text-slate-500">De donde saldrán las existencias físicas</p>
+                      <p className="text-[10px] text-slate-500">De donde saldrán las existencias físicas</p>
                     </div>
 
-                    <div className="space-y-2">
-                      <label className="font-semibold text-slate-300 uppercase text-xs flex items-center gap-1.5">
+                    <div className="space-y-1.5">
+                      <label className="font-medium text-slate-300 text-xs flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
-                        Tienda Destino (Entrada de Stock) *
+                        Tienda Destino (Entrada) *
                       </label>
                       <select
                         value={toStoreId}
@@ -1207,23 +1209,23 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                             if (other) setFromStoreId(other.id);
                           }
                         }}
-                        className="w-full h-11 px-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-medium text-xs sm:text-sm focus:border-indigo-500 focus:outline-none transition-colors"
+                        className="w-full h-9 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-white font-medium text-xs focus:border-indigo-500 focus:outline-none transition-colors"
                       >
                         {stores.map(s => (
                           <option key={s.id} value={s.id}>{s.name} ({s.id})</option>
                         ))}
                       </select>
-                      <p className="text-[11px] text-slate-500">Donde se recibirán al confirmar recepción</p>
+                      <p className="text-[10px] text-slate-500">Donde se recibirán al confirmar recepción</p>
                     </div>
                   </div>
 
                   {/* Resumen visual de la ruta */}
-                  <div className="p-3.5 bg-slate-950/60 border border-slate-800 rounded-xl flex items-center justify-between text-xs font-mono text-slate-300">
+                  <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center justify-between text-xs font-mono text-slate-300">
                     <div className="flex items-center gap-2">
                       <span className="font-bold text-slate-200">{getStoreName(fromStoreId)}</span>
                     </div>
                     <div className="flex items-center gap-2 text-indigo-400 font-sans text-[11px] font-semibold">
-                      <ArrowRight className="w-4 h-4 animate-pulse" />
+                      <ArrowRight className="w-4 h-4 text-slate-400 animate-pulse" />
                       <span>En tránsito</span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -1232,49 +1234,49 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                   </div>
 
                   {/* Notas / Observaciones con altura adecuada */}
-                  <div className="space-y-2 pt-2 border-t border-slate-800/80">
-                    <label className="font-semibold text-slate-300 uppercase text-xs block">
+                  <div className="space-y-1.5 pt-2 border-t border-slate-800/80">
+                    <label className="font-medium text-slate-300 text-xs block">
                       Notas / Observaciones del Traslado (Opcional)
                     </label>
                     <textarea
-                      rows={4}
+                      rows={3}
                       placeholder="Ej. Reabastecimiento urgente de existencias para fin de semana..."
                       value={notes}
                       onChange={(e) => setNotes(e.target.value)}
-                      className="w-full p-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs sm:text-sm resize-none transition-colors leading-relaxed"
+                      className="w-full p-2.5 bg-slate-950 border border-slate-700 rounded-lg text-white placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none text-xs resize-none transition-colors leading-relaxed"
                     />
-                    <p className="text-[11px] text-slate-500">Estas notas se registrarán en el historial de transferencias.</p>
+                    <p className="text-[10px] text-slate-500">Estas notas se registrarán en el historial de transferencias.</p>
                   </div>
                 </div>
 
                 {/* Columna Derecha: Producto y Cantidades */}
-                <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-6 sm:p-7 space-y-6 shadow-inner">
-                  <div className="flex items-center gap-2 text-indigo-400 font-bold text-xs uppercase tracking-wider pb-3 border-b border-slate-800/80">
-                    <Boxes className="w-4 h-4" />
-                    <span>2. Producto y Cantidades</span>
+                <div className="bg-slate-900/70 border border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4 shadow-inner">
+                  <div className="flex items-center gap-2 pb-2.5 border-b border-slate-800/80">
+                    <PackageCheck className="w-4 h-4 text-slate-400" />
+                    <span className="text-slate-200 font-bold text-xs uppercase tracking-wider">2. Producto y Cantidades</span>
                   </div>
 
                   {/* Selector de producto con buscador integrado */}
-                  <div className="space-y-3">
-                    <label className="font-semibold text-slate-300 uppercase text-xs block">
+                  <div className="space-y-2">
+                    <label className="font-medium text-slate-300 text-xs block">
                       Seleccionar Producto *
                     </label>
 
-                    {/* Buscador integrado */}
+                    {/* Buscador integrado con Search a la izquierda */}
                     <div className="relative">
-                      <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                      <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                       <input
                         type="text"
                         placeholder="Buscar por código SKU o nombre..."
                         value={transferSearch}
                         onChange={(e) => setTransferSearch(e.target.value)}
-                        className="w-full h-10 pl-10 pr-8 bg-slate-950 border border-slate-700 rounded-xl text-white text-xs placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none transition-colors"
+                        className="w-full h-9 pl-9 pr-8 bg-slate-950 border border-slate-700 rounded-lg text-white text-xs placeholder:text-slate-500 focus:border-indigo-500 focus:outline-none transition-colors"
                       />
                       {transferSearch && (
                         <button
                           type="button"
                           onClick={() => setTransferSearch('')}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs"
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 text-xs cursor-pointer"
                         >
                           ✕
                         </button>
@@ -1293,7 +1295,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                         <select
                           value={selectedProductId || ''}
                           onChange={(e) => setSelectedProductId(Number(e.target.value))}
-                          className="w-full h-11 px-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white focus:border-indigo-500 focus:outline-none text-xs sm:text-sm transition-colors"
+                          className="w-full h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white focus:border-indigo-500 focus:outline-none text-xs transition-colors"
                         >
                           {filteredList.length === 0 ? (
                             <option value="" disabled>No se encontraron productos coincidentes</option>
@@ -1327,25 +1329,25 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
                     return (
                       <>
-                        <div className="p-4 bg-slate-950/80 border border-slate-800 rounded-xl flex items-center justify-between shadow-inner">
+                        <div className="p-3 bg-slate-950/80 border border-slate-800 rounded-lg flex items-center justify-between shadow-inner">
                           <div className="space-y-0.5">
-                            <span className="text-xs text-slate-400 font-semibold uppercase block">Stock Disponible en Origen</span>
-                            <span className="text-xs text-slate-300 font-mono">{getStoreName(fromStoreId)}</span>
+                            <span className="text-[11px] text-slate-400 font-medium uppercase block">Stock Disponible en Origen</span>
+                            <span className="text-xs text-slate-300 font-mono font-medium">{getStoreName(fromStoreId)}</span>
                           </div>
                           <div className="text-right">
-                            <span className={`text-2xl font-black font-mono block ${availableStock > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                            <span className={`text-xl font-black font-mono block ${availableStock > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
                               {availableStock}
                             </span>
-                            <span className="text-[10px] text-slate-400 font-semibold uppercase">unidades físicas</span>
+                            <span className="text-[10px] text-slate-400 font-medium uppercase">unidades físicas</span>
                           </div>
                         </div>
 
                         {/* Input de cantidad a trasladar con botones rápidos */}
-                        <div className="space-y-2">
-                          <label className="font-semibold text-slate-300 uppercase text-xs block">
+                        <div className="space-y-1.5">
+                          <label className="font-medium text-slate-300 text-xs block">
                             Cantidad a Trasladar (Unidades) *
                           </label>
-                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                             <div className="relative flex-1">
                               <input
                                 type="number"
@@ -1354,19 +1356,19 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                                 required
                                 value={transferQty}
                                 onChange={(e) => setTransferQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
-                                className="w-full h-11 px-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-base font-bold focus:border-indigo-500 focus:outline-none transition-colors"
+                                className="w-full h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-white font-mono text-sm font-bold focus:border-indigo-500 focus:outline-none transition-colors"
                               />
-                              <span className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-mono">
+                              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 font-mono">
                                 uds
                               </span>
                             </div>
 
                             {/* Botones rápidos de incremento */}
-                            <div className="flex items-center gap-1.5 shrink-0">
+                            <div className="flex items-center gap-1 shrink-0">
                               <button
                                 type="button"
                                 onClick={() => setTransferQty(prev => Math.max(1, prev - 1))}
-                                className="h-11 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer"
+                                className="h-9 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition cursor-pointer"
                                 title="Restar 1 unidad"
                               >
                                 -1
@@ -1374,7 +1376,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                               <button
                                 type="button"
                                 onClick={() => setTransferQty(prev => (availableStock > 0 ? Math.min(availableStock, prev + 1) : prev + 1))}
-                                className="h-11 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer"
+                                className="h-9 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition cursor-pointer"
                                 title="Sumar 1 unidad"
                               >
                                 +1
@@ -1382,7 +1384,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                               <button
                                 type="button"
                                 onClick={() => setTransferQty(prev => (availableStock > 0 ? Math.min(availableStock, prev + 5) : prev + 5))}
-                                className="h-11 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer"
+                                className="h-9 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition cursor-pointer"
                                 title="Sumar 5 unidades"
                               >
                                 +5
@@ -1390,7 +1392,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                               <button
                                 type="button"
                                 onClick={() => setTransferQty(prev => (availableStock > 0 ? Math.min(availableStock, prev + 10) : prev + 10))}
-                                className="h-11 px-3 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold border border-slate-700 transition cursor-pointer"
+                                className="h-9 px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-xs font-semibold border border-slate-700 transition cursor-pointer"
                                 title="Sumar 10 unidades"
                               >
                                 +10
@@ -1399,7 +1401,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                                 <button
                                   type="button"
                                   onClick={() => setTransferQty(availableStock)}
-                                  className="h-11 px-3 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition cursor-pointer"
+                                  className="h-9 px-2.5 py-1 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold transition cursor-pointer"
                                   title="Trasladar todo el stock disponible"
                                 >
                                   Max ({availableStock})
@@ -1409,8 +1411,8 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                           </div>
 
                           {transferQty > availableStock && availableStock > 0 && (
-                            <p className="text-xs text-amber-400 font-semibold flex items-center gap-1.5 mt-1">
-                              <AlertCircle className="w-4 h-4 shrink-0" />
+                            <p className="text-xs text-amber-400 font-medium flex items-center gap-1.5 mt-1">
+                              <AlertCircle className="w-3.5 h-3.5 shrink-0 text-amber-400" />
                               <span>La cantidad indicada ({transferQty}) supera las existencias disponibles en origen ({availableStock} uds).</span>
                             </p>
                           )}
@@ -1424,18 +1426,18 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
             </div>
 
             {/* 3. Footer fijo inferior */}
-            <div className="w-full px-8 py-4 border-t border-slate-800 bg-slate-900/95 flex justify-end items-center gap-4 shrink-0">
+            <div className="w-full px-6 py-3.5 border-t border-slate-800 bg-slate-900/95 flex justify-end items-center gap-3 shrink-0">
               <button
                 type="button"
                 onClick={() => setShowTransferModal(false)}
-                className="h-10 px-6 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-xl text-xs transition cursor-pointer"
+                className="h-9 px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg text-xs transition cursor-pointer"
               >
                 Cancelar
               </button>
               <button
                 type="submit"
                 disabled={submitting}
-                className="h-10 px-7 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl text-xs transition shadow-lg shadow-indigo-600/25 cursor-pointer disabled:opacity-50 flex items-center gap-2"
+                className="h-9 px-6 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-lg text-xs transition shadow-md shadow-indigo-600/20 cursor-pointer disabled:opacity-50 flex items-center gap-2"
               >
                 <ArrowRightLeft className="w-4 h-4" />
                 <span>{submitting ? 'Procesando...' : 'Crear Traslado'}</span>
