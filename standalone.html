@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="es" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nexus Analytics Dashboard (Standalone)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col md:flex-row">
+
+  <!-- Sidebar -->
+  <aside class="w-full md:w-64 bg-slate-800 border-b md:border-b-0 md:border-r border-slate-700 p-4 flex flex-col justify-between shrink-0">
+    <div>
+      <div class="flex items-center space-x-3 px-2 py-3 mb-6">
+        <div class="p-2.5 bg-blue-600 rounded-xl shadow-lg">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg text-white">Nexus Analytics</h1>
+          <span class="text-xs text-slate-400">Enterprise v2.4</span>
+        </div>
+      </div>
+
+      <nav class="space-y-1">
+        <button class="w-full flex items-center space-x-3 px-3 py-2.5 rounded-lg bg-blue-600/20 text-blue-400 font-medium border border-blue-500/30">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z"></path></svg>
+          <span>Dashboard</span>
+        </button>
+      </nav>
+    </div>
+
+    <div class="mt-8 pt-4 border-t border-slate-700 flex items-center space-x-3">
+      <div class="w-9 h-9 rounded-full bg-blue-500 text-white font-bold flex items-center justify-center">SR</div>
+      <div>
+        <p class="text-sm font-semibold text-white">Sofía Ramírez</p>
+        <p class="text-xs text-slate-400">Administrator</p>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main Area -->
+  <main class="flex-1 p-6 space-y-6">
+    <header class="flex justify-between items-center bg-slate-800 p-4 rounded-xl border border-slate-700">
+      <div>
+        <h2 class="text-xl font-bold text-white">Panel de Control de Analítica</h2>
+        <p class="text-xs text-slate-400">Resumen en tiempo real del sistema</p>
+      </div>
+      <span class="px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-xs font-semibold">● Servidor Activo</span>
+    </header>
+
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+        <span class="text-xs text-slate-400 uppercase font-semibold">Ingresos Totales</span>
+        <h3 class="text-2xl font-bold text-white mt-2">$128,450.00</h3>
+        <span class="text-xs text-emerald-400 font-medium">↑ +14.2% este mes</span>
+      </div>
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+        <span class="text-xs text-slate-400 uppercase font-semibold">Usuarios Activos</span>
+        <h3 class="text-2xl font-bold text-white mt-2">24,890</h3>
+        <span class="text-xs text-blue-400 font-medium">↑ +8.7% este mes</span>
+      </div>
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+        <span class="text-xs text-slate-400 uppercase font-semibold">Tasa Conversión</span>
+        <h3 class="text-2xl font-bold text-white mt-2">4.35%</h3>
+        <span class="text-xs text-emerald-400 font-medium">↑ +1.2% este mes</span>
+      </div>
+      <div class="bg-slate-800 p-5 rounded-xl border border-slate-700">
+        <span class="text-xs text-slate-400 uppercase font-semibold">Tasa de Rebote</span>
+        <h3 class="text-2xl font-bold text-white mt-2">32.1%</h3>
+        <span class="text-xs text-rose-400 font-medium">↓ -2.4% mejora</span>
+      </div>
+    </div>
+
+    <!-- Chart SVG -->
+    <div class="bg-slate-800 p-6 rounded-xl border border-slate-700">
+      <h3 class="text-lg font-bold text-white mb-4">Crecimiento de Ingresos (SVG Interactivo)</h3>
+      <div class="w-full h-64 flex items-end space-x-3 pt-6 px-4 bg-slate-900/50 rounded-lg">
+        <div class="flex-1 bg-blue-600/40 hover:bg-blue-500 rounded-t h-[40%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-slate-300 opacity-0 group-hover:opacity-100">$65k</span></div>
+        <div class="flex-1 bg-blue-600/50 hover:bg-blue-500 rounded-t h-[48%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-slate-300 opacity-0 group-hover:opacity-100">$72k</span></div>
+        <div class="flex-1 bg-blue-600/60 hover:bg-blue-500 rounded-t h-[55%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-slate-300 opacity-0 group-hover:opacity-100">$81k</span></div>
+        <div class="flex-1 bg-blue-600/50 hover:bg-blue-500 rounded-t h-[52%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-slate-300 opacity-0 group-hover:opacity-100">$78k</span></div>
+        <div class="flex-1 bg-blue-600/70 hover:bg-blue-500 rounded-t h-[68%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-slate-300 opacity-0 group-hover:opacity-100">$95k</span></div>
+        <div class="flex-1 bg-blue-600/80 hover:bg-blue-500 rounded-t h-[75%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-slate-300 opacity-0 group-hover:opacity-100">$102k</span></div>
+        <div class="flex-1 bg-blue-600/90 hover:bg-blue-500 rounded-t h-[85%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs text-slate-300 opacity-0 group-hover:opacity-100">$110k</span></div>
+        <div class="flex-1 bg-blue-500 hover:bg-blue-400 rounded-t h-[100%] transition-all relative group"><span class="absolute -top-6 left-1/2 -translate-x-1/2 text-xs font-bold text-white opacity-100">$128k</span></div>
+      </div>
+      <div class="flex justify-between text-xs text-slate-400 mt-3 px-2">
+        <span>Ene</span><span>Feb</span><span>Mar</span><span>Abr</span><span>May</span><span>Jun</span><span>Jul</span><span>Ago</span>
+      </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <div class="bg-slate-800 rounded-xl border border-slate-700 overflow-hidden">
+      <div class="p-4 border-b border-slate-700">
+        <h3 class="font-bold text-white">Transacciones Recientes</h3>
+      </div>
+      <table class="w-full text-left text-sm">
+        <thead class="bg-slate-900/80 text-xs uppercase text-slate-400">
+          <tr>
+            <th class="p-3">ID</th>
+            <th class="p-3">Cliente</th>
+            <th class="p-3">Servicio</th>
+            <th class="p-3">Monto</th>
+            <th class="p-3">Estado</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y divide-slate-700 text-slate-300">
+          <tr>
+            <td class="p-3 font-mono text-blue-400">#TRX-9482</td>
+            <td class="p-3 font-semibold text-white">Empresa Alpha S.A.</td>
+            <td class="p-3">Suscripción Enterprise</td>
+            <td class="p-3 font-bold text-white">$4,200.00</td>
+            <td class="p-3"><span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-md text-xs">Completado</span></td>
+          </tr>
+          <tr>
+            <td class="p-3 font-mono text-blue-400">#TRX-9481</td>
+            <td class="p-3 font-semibold text-white">Carlos Mendoza</td>
+            <td class="p-3">Plan Pro Anual</td>
+            <td class="p-3 font-bold text-white">$299.00</td>
+            <td class="p-3"><span class="px-2 py-1 bg-emerald-500/20 text-emerald-400 rounded-md text-xs">Completado</span></td>
+          </tr>
+          <tr>
+            <td class="p-3 font-mono text-blue-400">#TRX-9480</td>
+            <td class="p-3 font-semibold text-white">Lucía Fernández</td>
+            <td class="p-3">Consultoría Cloud</td>
+            <td class="p-3 font-bold text-white">$1,500.00</td>
+            <td class="p-3"><span class="px-2 py-1 bg-amber-500/20 text-amber-400 rounded-md text-xs">Pendiente</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>

@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: appg-control-inventario
+    env: node
+    plan: free
+    buildCommand: npm install && npm run build
+    startCommand: node server/server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+    disk:
+      name: sqlite-data
+      mountPath: /app/server
+      sizeGB: 1
