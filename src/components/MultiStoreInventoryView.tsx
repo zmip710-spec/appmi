@@ -109,7 +109,15 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
     stock_tienda_3: number;
     stock_transito: number;
     stock_total: number;
-    transits: Array<{ from_store_name?: string; to_store_name?: string; from_store_id: string; to_store_id: string; quantity: number }>;
+    transits: Array<{
+      id: number;
+      from_store_name?: string;
+      to_store_name?: string;
+      from_store_id: string;
+      to_store_id: string;
+      quantity: number;
+      created_at?: string;
+    }>;
   } | null>(null);
 
   // Buscador y Selector Rápido de Producto en Cabecera
@@ -476,11 +484,26 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
     try {
       await receiveTransferApi(transferId);
       triggerToast('Recepción de traslado confirmada y stock actualizado.');
+      if (selectedDetailProduct) {
+        await refreshProductDetail(selectedDetailProduct.id, selectedDetailProduct.sku);
+      }
       await loadData(true);
     } catch (err: any) {
       triggerToast(err.message || 'Error al procesar la recepción.', 'error');
     } finally {
       setReceivingId(null);
+    }
+  };
+
+  const handleGoToTransfers = (transferId?: number) => {
+    setSelectedDetailProduct(null);
+    setShowEditModal(false);
+    setActiveTab('transfers');
+    if (transferId) {
+      const found = transfers.find(tr => tr.id === transferId);
+      if (found) {
+        setSelectedDetailTransfer(found);
+      }
     }
   };
 
@@ -1928,9 +1951,15 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                             Total: {grandTotal} uds
                           </span>
                           {transitTotal > 0 && (
-                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap font-mono">
-                              🚚 {transitTotal} en camino
-                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleGoToTransfers()}
+                              className="bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:border-amber-500/50 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap font-mono inline-flex items-center gap-1.5 transition-all cursor-pointer shadow-sm"
+                              title="Ver en la pantalla de historial y traslados"
+                            >
+                              <span>🚚 {transitTotal} en camino</span>
+                              <ArrowRight className="w-3 h-3 text-amber-400" />
+                            </button>
                           )}
                         </div>
                       </div>
@@ -1970,40 +1999,136 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                         })}
 
                         {/* 4ta caja: En Tránsito */}
-                        <div className="bg-amber-950/20 border border-amber-500/30 p-3.5 sm:p-4 rounded-xl text-center space-y-1.5 transition-all shadow-sm">
+                        <div
+                          onClick={transitTotal > 0 ? () => handleGoToTransfers() : undefined}
+                          className={`p-3.5 sm:p-4 rounded-xl text-center space-y-1.5 transition-all shadow-sm ${
+                            transitTotal > 0
+                              ? 'bg-amber-950/25 border border-amber-500/40 hover:border-amber-500/80 hover:bg-amber-950/40 cursor-pointer group'
+                              : 'bg-amber-950/20 border border-amber-500/30'
+                          }`}
+                          title={transitTotal > 0 ? "Click para ver en la pantalla de traslados" : undefined}
+                        >
                           <div className="flex items-center justify-center gap-1.5 min-w-0">
                             <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 shadow-sm" />
                             <span className="text-xs sm:text-sm font-bold text-amber-400 block truncate">
                               En Tránsito
                             </span>
+                            {transitTotal > 0 && (
+                              <ArrowRight className="w-3.5 h-3.5 text-amber-400 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
+                            )}
                           </div>
                           <span className={`text-2xl sm:text-3xl font-bold font-mono block ${transitTotal > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
                             {transitTotal}
                           </span>
-                          <span className="text-xs text-slate-400 font-semibold tracking-wider block uppercase">
-                            EN CAMINO
+                          <span className="text-xs text-slate-400 font-semibold tracking-wider block uppercase group-hover:text-amber-300 transition-colors">
+                            {transitTotal > 0 ? 'VER EN TRASLADOS →' : 'EN CAMINO'}
                           </span>
                         </div>
                       </div>
 
-                      {/* Desglose de envíos en camino si existen */}
+                      {/* Desglose de envíos en camino con confirmación directa y acceso a traslados */}
                       {selectedDetailMatrix?.transits && selectedDetailMatrix.transits.length > 0 && (
-                        <div className="bg-amber-950/30 border border-amber-500/20 p-3.5 rounded-xl space-y-2 text-xs mt-3">
-                          <span className="text-xs font-bold text-amber-300 block flex items-center gap-1.5">
-                            🚚 Envíos activos en movimiento:
-                          </span>
-                          <div className="space-y-1.5">
+                        <div className="bg-amber-950/25 border border-amber-500/30 p-4 rounded-xl space-y-3 mt-3 shadow-inner">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-500/20 pb-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-2 w-2 relative">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
+                              </span>
+                              <span className="text-xs font-bold text-amber-300 uppercase tracking-wide">
+                                Envíos activos en movimiento ({selectedDetailMatrix.transits.length})
+                              </span>
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => handleGoToTransfers()}
+                              className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 hover:text-amber-100 bg-amber-500/20 hover:bg-amber-500/30 px-3 py-1.5 rounded-lg border border-amber-500/30 transition-colors cursor-pointer w-fit"
+                              title="Ir al Historial y Pantalla de Traslados"
+                            >
+                              <span>Ir a Pantalla de Traslados</span>
+                              <ArrowRight className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+
+                          <div className="space-y-2">
                             {selectedDetailMatrix.transits.map((t: any, idx: number) => {
                               const fromName = t.from_store_name || getStoreName(t.from_store_id);
                               const toName = t.to_store_name || getStoreName(t.to_store_id);
+                              const isReceivingThis = receivingId === t.id;
+
                               return (
-                                <div key={idx} className="text-xs text-amber-200/90 font-mono flex items-center justify-between p-2 rounded-lg bg-amber-950/40 border border-amber-500/10">
-                                  <span>De <strong>{fromName}</strong> a <strong>{toName}</strong>:</span>
-                                  <span className="font-bold text-amber-300">{t.quantity} unidades</span>
+                                <div
+                                  key={t.id || idx}
+                                  className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 rounded-xl bg-slate-950/70 border border-amber-500/20 hover:border-amber-500/40 transition-colors"
+                                >
+                                  <div className="flex items-center gap-2.5 flex-wrap">
+                                    <span className="text-xs font-mono font-bold text-amber-300 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/20">
+                                      #{t.id}
+                                    </span>
+                                    <div className="text-xs text-slate-200">
+                                      <span className="text-slate-400">De </span>
+                                      <strong className="text-white">{fromName}</strong>
+                                      <span className="text-slate-400"> hacia </span>
+                                      <strong className="text-emerald-400">{toName}</strong>
+                                    </div>
+                                    <span className="text-xs font-bold font-mono text-amber-300 bg-amber-950/80 px-2.5 py-0.5 rounded-full border border-amber-500/30">
+                                      {t.quantity} {t.quantity === 1 ? 'unidad' : 'unidades'}
+                                    </span>
+                                  </div>
+
+                                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleGoToTransfers(t.id)}
+                                      className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-300 hover:text-white bg-slate-800 hover:bg-slate-700 px-2.5 py-1.5 rounded-lg border border-slate-700 transition cursor-pointer"
+                                      title={`Ver detalle completo del traslado #${t.id}`}
+                                    >
+                                      <Eye className="w-3.5 h-3.5 text-slate-400" />
+                                      <span className="hidden sm:inline">Ver Traslado</span>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => handleReceiveTransfer(t.id)}
+                                      disabled={isReceivingThis}
+                                      className="inline-flex items-center gap-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 px-3.5 py-1.5 rounded-lg shadow-md shadow-emerald-950/50 transition cursor-pointer"
+                                      title={`Confirmar recepción y sumar ${t.quantity} uds a ${toName}`}
+                                    >
+                                      {isReceivingThis ? (
+                                        <>
+                                          <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                                          <span>Confirmando...</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-100" />
+                                          <span>Confirmar Recepción</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
                                 </div>
                               );
                             })}
                           </div>
+                        </div>
+                      )}
+
+                      {/* Si hay stock en tránsito reportado pero transits está vacío */}
+                      {transitTotal > 0 && (!selectedDetailMatrix?.transits || selectedDetailMatrix.transits.length === 0) && (
+                        <div className="bg-amber-950/25 border border-amber-500/30 p-3.5 rounded-xl flex items-center justify-between gap-3 text-xs mt-3 shadow-inner">
+                          <div className="flex items-center gap-2 text-amber-300">
+                            <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+                            <span>Hay <strong>{transitTotal} unidades</strong> en tránsito para este SKU.</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleGoToTransfers()}
+                            className="inline-flex items-center gap-1.5 text-xs font-bold text-amber-300 hover:text-amber-100 bg-amber-500/20 hover:bg-amber-500/30 px-3 py-1.5 rounded-lg border border-amber-500/30 transition cursor-pointer shrink-0"
+                          >
+                            <span>Ir a Pantalla de Traslados</span>
+                            <ArrowRight className="w-3.5 h-3.5" />
+                          </button>
                         </div>
                       )}
                     </>
