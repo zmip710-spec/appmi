@@ -259,7 +259,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="w-full flex-1 flex flex-col overflow-y-auto">
+      <main className="w-full flex-1 flex flex-col overflow-y-auto overflow-x-hidden">
         <Header
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -348,14 +348,14 @@ export default function App() {
 
           {/* TAB: VENTAS RÁPIDAS (POS) */}
           {activeTab === 'sales' && (
-            <div className="max-w-7xl mx-auto w-full px-6 py-6">
+            <div className="w-full max-w-7xl mx-auto">
               <SalesView currentUser={currentUser} />
             </div>
           )}
 
           {/* TAB: CONFIGURACIÓN */}
           {activeTab === 'settings' && (
-            <div className="max-w-7xl mx-auto w-full px-6 py-6">
+            <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-4 sm:py-6">
               <SettingsView currentUser={currentUser} onUpdateUser={handleUpdateUser} />
             </div>
           )}

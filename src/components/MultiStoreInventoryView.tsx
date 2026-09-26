@@ -473,7 +473,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
   return (
     <>
-      <div className="max-w-7xl mx-auto w-full px-6 py-6 space-y-6">
+      <div className="w-full max-w-full min-h-screen px-3 sm:px-6 overflow-x-hidden py-3 sm:py-6 space-y-4 sm:space-y-6">
       {/* Toast Notification */}
       {toast.show && (
         <div
@@ -507,11 +507,11 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
         }, 0);
 
         return (
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl px-4 py-2.5 flex flex-wrap lg:flex-nowrap items-center justify-between gap-4 mb-4 backdrop-blur-sm shadow-md">
+          <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl px-3 sm:px-4 py-2.5 flex flex-wrap lg:flex-nowrap items-center justify-between gap-3 sm:gap-4 mb-4 backdrop-blur-sm shadow-md">
             {/* 1. Sección Izquierda (Título y Estado) */}
-            <div className="flex items-center gap-2.5 shrink-0">
-              <h1 className="text-base font-bold text-white whitespace-nowrap">Control de Inventario</h1>
-              <span className="text-[11px] text-slate-400 bg-slate-800/70 border border-slate-700/50 px-2 py-0.5 rounded-full whitespace-nowrap">
+            <div className="flex items-center gap-2.5 shrink-0 min-w-0">
+              <h1 className="text-base sm:text-xl font-bold text-white truncate">Control de Inventario</h1>
+              <span className="text-[11px] text-slate-400 bg-slate-800/70 border border-slate-700/50 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
                 3 sucursales
               </span>
             </div>
@@ -583,11 +583,11 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       })()}
 
       {/* Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-800 pb-4">
-        <div className="flex items-center gap-2 bg-slate-900/80 p-1.5 rounded-xl border border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-800 pb-3 sm:pb-4">
+        <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap py-1 scrollbar-none bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 w-full sm:w-auto">
           <button
             onClick={() => setActiveTab('matrix')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer ${
+            className={`shrink-0 flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
               activeTab === 'matrix'
                 ? 'bg-indigo-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -599,7 +599,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
           <button
             onClick={() => setActiveTab('transfers')}
-            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all cursor-pointer relative ${
+            className={`shrink-0 flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer relative ${
               activeTab === 'transfers'
                 ? 'bg-indigo-600 text-white shadow-md'
                 : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
@@ -644,22 +644,21 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
         </div>
       ) : activeTab === 'matrix' ? (
         /* ==================== TAB A: MATRIZ DE EXISTENCIAS ==================== */
-        <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-800/80 text-slate-300 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
-                <tr>
-                  <th className="py-4 px-4">SKU</th>
-                  <th className="py-4 px-4">Producto</th>
-                  <th className="py-4 px-3 text-center">{getStoreName('tienda_1')}</th>
-                  <th className="py-4 px-3 text-center">{getStoreName('tienda_2')}</th>
-                  <th className="py-4 px-3 text-center">{getStoreName('tienda_3')}</th>
-                  <th className="py-4 px-3 text-center text-amber-400">En Tránsito</th>
-                  <th className="py-4 px-4 text-center">Stock Total</th>
-                  <th className="py-4 px-4 text-right">Precio Costo</th>
-                  <th className="py-4 px-4 text-right text-emerald-400">Precio Venta</th>
-                </tr>
-              </thead>
+        <div className="w-full overflow-x-auto rounded-lg border border-slate-800 bg-slate-900 shadow-xl">
+          <table className="w-full text-left text-sm min-w-[850px] whitespace-nowrap">
+            <thead className="bg-slate-800/80 text-slate-300 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
+              <tr>
+                <th className="py-4 px-4">SKU</th>
+                <th className="py-4 px-4">Producto</th>
+                <th className="py-4 px-3 text-center">{getStoreName('tienda_1')}</th>
+                <th className="py-4 px-3 text-center">{getStoreName('tienda_2')}</th>
+                <th className="py-4 px-3 text-center">{getStoreName('tienda_3')}</th>
+                <th className="py-4 px-3 text-center text-amber-400">En Tránsito</th>
+                <th className="py-4 px-4 text-center">Stock Total</th>
+                <th className="py-4 px-4 text-right">Precio Costo</th>
+                <th className="py-4 px-4 text-right text-emerald-400">Precio Venta</th>
+              </tr>
+            </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-200">
                 {filteredMatrix.length === 0 ? (
                   <tr>
@@ -766,7 +765,6 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                 )}
               </tbody>
             </table>
-          </div>
         </div>
       ) : (
         /* ==================== TAB B: HISTORIAL Y TRÁNSITO ==================== */

@@ -33,9 +33,9 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className="sticky top-0 z-20 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800/80 shadow-xs w-full">
-      <div className="max-w-7xl mx-auto w-full px-6 py-3 sm:py-4 flex items-center justify-between">
+      <div className="max-w-7xl mx-auto w-full px-3 sm:px-6 py-2.5 sm:py-4 flex items-center justify-between">
         {/* Title & Page Header Info */}
-        <div className="flex-1 min-w-0 pr-4">
+        <div className="flex-1 min-w-0 pr-2 sm:pr-4">
           <div className="flex items-center space-x-2">
             <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white truncate tracking-tight">
               {getTabTitle()}

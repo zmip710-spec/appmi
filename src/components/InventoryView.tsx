@@ -534,10 +534,10 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
 
   return (
     <>
-      <div className="max-w-7xl mx-auto w-full px-6 py-6 space-y-6 min-h-[500px]">
+      <div className="w-full max-w-full min-h-screen px-3 sm:px-6 overflow-x-hidden py-3 sm:py-6 space-y-4 sm:space-y-6 min-h-[500px]">
       {/* Compact Minimal Header */}
       <div className="flex items-center justify-between py-2 px-1 border-b border-slate-200 dark:border-slate-800 shrink-0">
-        <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white tracking-tight">Stock e Inventario</h2>
+        <h2 className="text-base sm:text-xl font-bold text-slate-900 dark:text-white truncate tracking-tight">Stock e Inventario</h2>
         {!isVendedor && (
           <button
             onClick={() => {
@@ -596,7 +596,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
         </div>
 
         {/* Quick Filter Chips */}
-        <div className="flex items-center space-x-2 overflow-x-auto scrollbar-none pb-0.5 text-xs">
+        <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap py-1 scrollbar-none text-xs">
           <button
             onClick={() => {
               setFilterStatus('all');
@@ -713,13 +713,13 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
       </div>
 
       {/* DESKTOP TABLE VIEW (Visible on md and larger) */}
-      <div className="hidden md:block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex justify-between items-center">
+      <div className="hidden md:block w-full overflow-x-auto rounded-lg border border-slate-800 bg-white dark:bg-slate-900 shadow-sm">
+        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
           <h3 className="font-bold text-slate-900 dark:text-white text-base">Catálogo de Productos ({filteredInventory.length})</h3>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300">
+        <div className="w-full overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-700 dark:text-slate-300 min-w-[750px] whitespace-nowrap">
             <thead className="bg-slate-50 dark:bg-slate-900/80 text-xs uppercase text-slate-600 dark:text-slate-400 font-semibold border-b border-slate-200 dark:border-slate-700">
               <tr>
                 <th className="px-5 py-3">SKU</th>

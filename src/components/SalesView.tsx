@@ -15,7 +15,8 @@ import {
   List,
   Eye,
   Calendar,
-  Filter
+  Filter,
+  X
 } from 'lucide-react';
 import { fetchStoresApi, fetchInventoryMatrixApi, createSaleApi, fetchSalesApi, Store as StoreType, User } from '../services/api';
 import { SaleDetailModal } from './SaleDetailModal';
@@ -43,6 +44,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [cart, setCart] = useState<CartItem[]>([]);
+  const [isMobileCartOpen, setIsMobileCartOpen] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
@@ -271,6 +273,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
           itemsCount: cart.reduce((acc, i) => acc + i.quantity, 0)
         });
         setCart([]);
+        setIsMobileCartOpen(false);
         await loadData(true);
       }
     } catch (err: any) {
@@ -281,7 +284,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
   };
 
   return (
-    <div className="p-4 sm:p-6 max-w-[1600px] mx-auto space-y-4">
+    <div className="w-full max-w-full min-h-screen px-3 sm:px-6 overflow-x-hidden space-y-3 sm:space-y-4">
       {/* Toast notification */}
       {toast.show && (
         <div
@@ -296,84 +299,82 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
         </div>
       )}
 
-      {/* 1. UNIFICACIÓN DE CABECERA SUPERIOR (Una sola barra compacta h-14) */}
-      <div className="h-14 flex items-center justify-between px-4 bg-slate-900/70 border border-slate-800 rounded-xl backdrop-blur-sm shadow-md">
-        {/* Izquierda: Pestañas de Navegación Segmentadas */}
-        <div className="inline-flex bg-slate-950 p-1 rounded-lg border border-slate-800/80">
+      {/* 1. BARRA DE FILTROS Y SUCURSALES (Punto de Venta, Historial, Tienda 1, Tienda 2) */}
+      <div className="w-full flex items-center gap-2 overflow-x-auto whitespace-nowrap py-1 scrollbar-none bg-slate-900/70 border border-slate-800 rounded-xl px-2.5 sm:px-4 py-2 backdrop-blur-sm shadow-md">
+        {/* Pestañas: Punto de Venta & Historial */}
+        <button
+          type="button"
+          onClick={() => setActiveSubTab('pos')}
+          className={`shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeSubTab === 'pos'
+              ? 'bg-indigo-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800/60'
+          }`}
+        >
+          <ShoppingCart className="w-3.5 h-3.5" />
+          <span>Punto de Venta</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setActiveSubTab('history');
+            loadSalesHistory();
+          }}
+          className={`shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+            activeSubTab === 'history'
+              ? 'bg-indigo-600 text-white shadow-md'
+              : 'text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800/60'
+          }`}
+        >
+          <Receipt className="w-3.5 h-3.5" />
+          <span>Historial</span>
+          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
+            {salesHistory.length}
+          </span>
+        </button>
+
+        {/* Separador y Tiendas */}
+        {activeSubTab === 'pos' && stores.length > 0 && (
+          <div className="h-5 w-px bg-slate-800 shrink-0 mx-0.5" />
+        )}
+
+        {activeSubTab === 'pos' && stores.map(st => (
           <button
-            onClick={() => setActiveSubTab('pos')}
-            className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-              activeSubTab === 'pos'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
+            key={st.id}
+            type="button"
+            onClick={() => handleSelectStore(st.id)}
+            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+              selectedStoreId === st.id
+                ? 'bg-indigo-600 text-white shadow border border-indigo-500/40'
+                : 'text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800/60'
             }`}
           >
-            <ShoppingCart className="w-3.5 h-3.5" />
-            <span>Punto de Venta</span>
+            <Store className="w-3.5 h-3.5" />
+            <span>{st.name}</span>
           </button>
+        ))}
 
-          <button
-            onClick={() => {
-              setActiveSubTab('history');
-              loadSalesHistory();
-            }}
-            className={`px-3.5 py-1.5 rounded-md text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-              activeSubTab === 'history'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            <Receipt className="w-3.5 h-3.5" />
-            <span>Historial de Ventas</span>
-            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
-              {salesHistory.length}
-            </span>
-          </button>
-        </div>
-
-        {/* Derecha: Selector de Sucursal Activa y Refrescar */}
-        <div className="flex items-center gap-2">
-          {activeSubTab === 'pos' && (
-            <>
-              <span className="text-xs text-slate-400 font-medium hidden md:inline">Sucursal:</span>
-              <div className="inline-flex bg-slate-950 p-1 rounded-lg border border-slate-800/80">
-                {stores.map(st => (
-                  <button
-                    key={st.id}
-                    onClick={() => handleSelectStore(st.id)}
-                    className={`px-3 py-1 rounded-md text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-                      selectedStoreId === st.id
-                        ? 'bg-indigo-600 text-white shadow'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    <Store className="w-3.5 h-3.5" />
-                    <span>{st.name}</span>
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-
-          <button
-            onClick={() => {
-              loadData(true);
-              if (activeSubTab === 'history') loadSalesHistory();
-            }}
-            disabled={refreshing}
-            className="h-8 w-8 inline-flex items-center justify-center rounded-lg bg-slate-800/80 border border-slate-700 text-slate-400 hover:text-white transition cursor-pointer disabled:opacity-50"
-            title="Refrescar existencias"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-indigo-400' : ''}`} />
-          </button>
-        </div>
+        {/* Botón Refrescar */}
+        <button
+          type="button"
+          onClick={() => {
+            loadData(true);
+            if (activeSubTab === 'history') loadSalesHistory();
+          }}
+          disabled={refreshing}
+          className="shrink-0 ml-auto h-8 w-8 inline-flex items-center justify-center rounded-lg bg-slate-800/80 border border-slate-700 text-slate-400 hover:text-white transition cursor-pointer disabled:opacity-50"
+          title="Refrescar existencias"
+        >
+          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-indigo-400' : ''}`} />
+        </button>
       </div>
 
-      {/* 2. LAYOUT PRINCIPAL DE 2 COLUMNAS BALANCEADAS (h-[calc(100vh-140px)]) */}
+      {/* 2. LAYOUT PRINCIPAL DE 2 COLUMNAS (h-auto en móvil, h-[calc(100vh-140px)] en desktop) */}
       {activeSubTab === 'pos' ? (
-        <div className="grid grid-cols-12 gap-4 h-[calc(100vh-140px)] min-h-[500px]">
-          {/* PANEL IZQUIERDO: Catálogo de Productos (col-span-7) */}
-          <div className="col-span-12 lg:col-span-7 xl:col-span-7 bg-slate-900/40 border border-slate-800/80 rounded-xl p-4 flex flex-col h-full overflow-hidden shadow-lg">
+        <div className="grid grid-cols-12 gap-4 h-auto lg:h-[calc(100vh-140px)] min-h-[500px]">
+          {/* PANEL IZQUIERDO: Catálogo de Productos (col-span-12 en móvil, lg:col-span-7) */}
+          <div className="col-span-12 lg:col-span-7 xl:col-span-7 bg-slate-900/40 border border-slate-800/80 rounded-xl p-3 sm:p-4 flex flex-col h-[calc(100vh-210px)] sm:h-[calc(100vh-160px)] lg:h-full overflow-hidden shadow-lg">
             {/* Barra de herramientas superior: Buscador + Layout Toggle */}
             <div className="flex items-center gap-3 mb-3 shrink-0">
               <div className="relative flex-1">
@@ -421,7 +422,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
             </div>
 
             {/* Catálogo con scroll propio */}
-            <div className="flex-1 overflow-y-auto pr-1 scrollbar-thin scrollbar-thumb-slate-700">
+            <div className="flex-1 overflow-y-auto pr-1 pb-24 lg:pb-1 scrollbar-thin scrollbar-thumb-slate-700">
               {loading ? (
                 <div className="flex items-center justify-center py-20 text-slate-400 gap-3">
                   <RefreshCw className="w-5 h-5 animate-spin text-indigo-400" />
@@ -558,8 +559,8 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
             </div>
           </div>
 
-          {/* PANEL DERECHO: Ticket de Salida / Cobro (col-span-5) */}
-          <div className="col-span-12 lg:col-span-5 xl:col-span-5 bg-slate-900/70 border border-slate-800 rounded-xl p-4 flex flex-col h-full overflow-hidden shadow-xl">
+          {/* PANEL DERECHO: Ticket de Salida / Cobro (hidden en móvil, lg:flex lg:col-span-5) */}
+          <div className="hidden lg:flex lg:col-span-5 xl:col-span-5 bg-slate-900/70 border border-slate-800 rounded-xl p-4 flex-col h-full overflow-hidden shadow-xl">
             {/* Header del Ticket */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3 shrink-0">
               <div className="flex items-center gap-2">
@@ -672,6 +673,158 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
               )}
             </div>
           </div>
+
+          {/* BOTÓN FLOTANTE MÓVIL (< lg) SOBRE LA BARRA DE NAVEGACIÓN */}
+          <div className="lg:hidden fixed bottom-[72px] left-3 right-3 sm:left-6 sm:right-6 z-40">
+            <button
+              type="button"
+              onClick={() => setIsMobileCartOpen(true)}
+              className="w-full py-2.5 sm:py-3 px-4 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white rounded-xl sm:rounded-2xl shadow-2xl shadow-emerald-950/70 border border-emerald-400/30 flex items-center justify-between transition cursor-pointer"
+            >
+              <div className="flex items-center gap-2.5">
+                <div className="relative p-1.5 rounded-lg bg-emerald-950/50 border border-emerald-400/30 text-white">
+                  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+                  {cart.reduce((acc, i) => acc + i.quantity, 0) > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-white text-emerald-900 font-extrabold text-[10px] flex items-center justify-center shadow">
+                      {cart.reduce((acc, i) => acc + i.quantity, 0)}
+                    </span>
+                  )}
+                </div>
+                <div className="text-left">
+                  <span className="text-xs sm:text-sm font-bold uppercase tracking-wider block">
+                    Ver Ticket ({cart.reduce((acc, i) => acc + i.quantity, 0)})
+                  </span>
+                  <span className="text-[10px] sm:text-xs text-emerald-100 font-medium">
+                    {cart.length > 0 ? 'Toca para revisar y cobrar' : 'Ticket vacío'}
+                  </span>
+                </div>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] sm:text-xs font-mono text-emerald-200 block uppercase font-semibold">Total</span>
+                <span className="text-sm sm:text-lg font-black font-mono text-white">
+                  Q {totalAmount.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </span>
+              </div>
+            </button>
+          </div>
+
+          {/* MODAL / PANTALLA COMPLETA DEL TICKET EN MÓVIL (< lg) */}
+          {isMobileCartOpen && (
+            <div className="lg:hidden fixed inset-0 top-0 left-0 right-0 bottom-0 z-[100] w-screen h-screen bg-slate-950 flex flex-col m-0 p-0">
+              {/* Header Fijo */}
+              <div className="w-full px-4 py-3.5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                    <ShoppingCart className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h2 className="text-xs font-bold text-white uppercase tracking-wider">TICKET DE SALIDA</h2>
+                    <span className="text-[10px] text-indigo-400 font-semibold">{getStoreName(selectedStoreId)}</span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsMobileCartOpen(false)}
+                  className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 cursor-pointer border border-slate-700"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  <span>Cerrar</span>
+                </button>
+              </div>
+
+              {/* Lista de productos scrolleable */}
+              <div className="flex-1 overflow-y-auto divide-y divide-slate-800/60 p-4 space-y-1">
+                {cart.length === 0 ? (
+                  <div className="py-20 text-center space-y-3 flex flex-col items-center justify-center">
+                    <div className="w-12 h-12 rounded-full bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600">
+                      <ShoppingCart className="w-6 h-6" />
+                    </div>
+                    <p className="text-xs text-slate-400 font-medium">El ticket está vacío.</p>
+                    <p className="text-[11px] text-slate-500 max-w-xs">
+                      Selecciona productos del catálogo para agregarlos a la venta.
+                    </p>
+                  </div>
+                ) : (
+                  cart.map(item => (
+                    <div key={item.product_id} className="py-3 flex items-center justify-between gap-3">
+                      <div className="flex-1 min-w-0 space-y-0.5">
+                        <span className="text-[10px] font-mono text-slate-400 font-semibold">{item.sku}</span>
+                        <h4 className="text-xs font-semibold text-white truncate">{item.name}</h4>
+                        <div className="text-[11px] text-emerald-400 font-mono">
+                          Q {item.unit_price.toFixed(2)} × {item.quantity} = <strong className="font-bold">Q {(item.unit_price * item.quantity).toFixed(2)}</strong>
+                        </div>
+                      </div>
+
+                      {/* Controles de Cantidad */}
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.product_id, -1)}
+                          className="h-8 w-8 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 flex items-center justify-center cursor-pointer active:scale-95"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="w-7 text-center font-mono font-bold text-xs text-white">{item.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(item.product_id, 1)}
+                          className="h-8 w-8 rounded-lg bg-slate-900 border border-slate-800 text-slate-300 hover:bg-slate-800 flex items-center justify-center cursor-pointer active:scale-95"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeFromCart(item.product_id)}
+                          className="h-8 w-8 ml-1 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-400 hover:bg-rose-500/20 flex items-center justify-center cursor-pointer"
+                          title="Eliminar ítem"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              {/* Footer Fijo con Total y Cobro */}
+              <div className="border-t border-slate-800 p-4 bg-slate-900/90 space-y-3 shrink-0">
+                <div className="flex items-center justify-between text-xs text-slate-400 font-medium">
+                  <span>Ítems a descontar:</span>
+                  <span className="text-white font-mono font-bold">
+                    {cart.reduce((acc, i) => acc + i.quantity, 0)} unidades
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between p-3 rounded-xl bg-slate-950 border border-emerald-500/30">
+                  <span className="text-xs font-bold text-slate-300 uppercase tracking-wider">TOTAL GENERAL:</span>
+                  <span className="text-xl font-black font-mono text-emerald-400">
+                    Q {totalAmount.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    handleCheckout();
+                  }}
+                  disabled={cart.length === 0 || submitting}
+                  className="w-full h-12 rounded-xl bg-emerald-600 hover:bg-emerald-500 disabled:opacity-40 disabled:cursor-not-allowed text-white font-bold text-sm shadow-lg shadow-emerald-600/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95"
+                >
+                  {submitting ? (
+                    <>
+                      <RefreshCw className="w-4 h-4 animate-spin text-white" />
+                      <span>Procesando Venta...</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>REGISTRAR SALIDA / COBRAR</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       ) : (
         /* HISTORIAL DE VENTAS */
