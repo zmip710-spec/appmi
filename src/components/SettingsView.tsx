@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Lock, User as UserIcon, CheckCircle2, Shield, AlertCircle, Users, Eye, EyeOff, Building2, RefreshCw, Store as StoreIcon, Check, Palette } from 'lucide-react';
+import { Save, Lock, User as UserIcon, CheckCircle2, Shield, AlertCircle, Users, Eye, EyeOff, Building2, RefreshCw, Store as StoreIcon, Check, Palette, ChevronDown } from 'lucide-react';
 import { updateUserProfileApi, changePasswordApi, fetchStoresApi, updateStoreApi, User, Store } from '../services/api';
 import { UsersView } from './UsersView';
 import { UserAvatar } from './UserAvatar';
@@ -29,7 +29,8 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
   const [storeColorsState, setStoreColorsState] = useState<Record<string, string>>(getStoreColorMap);
   const [loadingStores, setLoadingStores] = useState(false);
   const [savingStoreId, setSavingStoreId] = useState<string | null>(null);
-  const [isSavingAll, setIsSavingAll] = useState(false);
+  const [selectedConfigStoreId, setSelectedConfigStoreId] = useState<string>('tienda_1');
+  const [isColorDropdownOpen, setIsColorDropdownOpen] = useState(false);
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('¡Cambios guardados con éxito!');
@@ -47,10 +48,15 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
     setLoadingStores(true);
     try {
       const data = await fetchStoresApi();
-      setStoresList(data);
+      const storesToUse = (data && data.length > 0) ? data : [
+        { id: 'tienda_1', name: 'Tienda Central' },
+        { id: 'tienda_2', name: 'Sucursal Norte' },
+        { id: 'tienda_3', name: 'Sucursal Sur' }
+      ];
+      setStoresList(storesToUse);
       const nameMap: Record<string, string> = {};
       const colorMap: Record<string, string> = { ...getStoreColorMap() };
-      data.forEach(s => {
+      storesToUse.forEach(s => {
         nameMap[s.id] = s.name;
         if (s.color) {
           colorMap[s.id] = s.color;
@@ -59,8 +65,21 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
       });
       setStoreNames(nameMap);
       setStoreColorsState(colorMap);
+      setSelectedConfigStoreId(prev => (storesToUse.some(s => s.id === prev) ? prev : storesToUse[0].id));
     } catch {
-      // Fallback
+      const fallbackStores = [
+        { id: 'tienda_1', name: 'Tienda Central' },
+        { id: 'tienda_2', name: 'Sucursal Norte' },
+        { id: 'tienda_3', name: 'Sucursal Sur' }
+      ];
+      setStoresList(fallbackStores);
+      const nameMap: Record<string, string> = {};
+      const colorMap: Record<string, string> = { ...getStoreColorMap() };
+      fallbackStores.forEach(s => {
+        nameMap[s.id] = s.name;
+      });
+      setStoreNames(nameMap);
+      setStoreColorsState(colorMap);
     } finally {
       setLoadingStores(false);
     }
@@ -96,26 +115,6 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
       setErrorMsg(err.message || 'Error al actualizar la tienda.');
     } finally {
       setSavingStoreId(null);
-    }
-  };
-
-  const handleSaveAllStores = async () => {
-    setErrorMsg('');
-    setIsSavingAll(true);
-    try {
-      for (const store of storesList) {
-        const nameToSave = storeNames[store.id] || store.name;
-        const colorToSave = storeColorsState[store.id] || store.color || DEFAULT_STORE_COLORS[store.id] || '#6366f1';
-        await updateStoreApi(store.id, nameToSave.trim(), colorToSave);
-        saveStoreColorInStorage(store.id, colorToSave);
-      }
-      triggerSuccess('¡Todas las sucursales fueron actualizadas con éxito!');
-      window.dispatchEvent(new Event('stores_updated'));
-      await loadStores();
-    } catch (err: any) {
-      setErrorMsg(err.message || 'Error al guardar las sucursales.');
-    } finally {
-      setIsSavingAll(false);
     }
   };
 
@@ -174,7 +173,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
   };
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto">
+    <div className="space-y-6 w-full max-w-7xl mx-auto px-6 py-6">
       {/* Header Banner */}
       <div className="bg-white dark:bg-slate-800 p-4 sm:p-5 rounded-2xl border border-slate-200 dark:border-slate-700/80 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-sm">
         <div>
@@ -360,28 +359,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
         {/* TAB: STORES MANAGEMENT */}
         {activeTab === 'stores' && (
           <div className="space-y-6">
-            <div className="border-b border-slate-200 dark:border-slate-700/80 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                  <Building2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                  <span>Configuración de Sucursales & Tiendas</span>
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                  Personaliza los nombres públicos y el color identificador de cada tienda para distinguirlas visualmente en el inventario, matriz de existencias, traslados y punto de venta.
-                </p>
-              </div>
-
-              {storesList.length > 0 && (
-                <button
-                  type="button"
-                  onClick={handleSaveAllStores}
-                  disabled={isSavingAll}
-                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition shadow-md shadow-indigo-600/20 cursor-pointer active:scale-95 shrink-0 disabled:opacity-50"
-                >
-                  {isSavingAll ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span>Guardar Todas las Sucursales</span>
-                </button>
-              )}
+            <div className="border-b border-slate-200 dark:border-slate-800 pb-4">
+              <h3 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                <span>Configuración de Sucursales & Tiendas</span>
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                Personaliza los nombres públicos y el color identificador de cada tienda para distinguirlas visualmente en el inventario, matriz de existencias, traslados y punto de venta.
+              </p>
             </div>
 
             {loadingStores ? (
@@ -390,136 +375,212 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
                 <span>Cargando configuración de sucursales...</span>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-                {storesList.map(store => {
-                  const currentColorHex = storeColorsState[store.id] || store.color || DEFAULT_STORE_COLORS[store.id] || '#6366f1';
-                  const currentTheme = getStoreColor(store.id, currentColorHex);
-                  const currentName = storeNames[store.id] ?? store.name;
-                  const isSavingThis = savingStoreId === store.id;
+              <div className="space-y-6">
+                {/* 2. Selector de Tienda a Configurar (Desplegable) */}
+                <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="space-y-1">
+                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                      Seleccionar Sucursal
+                    </label>
+                    <p className="text-xs text-slate-400">
+                      Elige la tienda que deseas configurar en el formulario inferior
+                    </p>
+                  </div>
+
+                  <div className="relative w-full sm:w-80">
+                    <select
+                      value={selectedConfigStoreId}
+                      onChange={(e) => {
+                        setSelectedConfigStoreId(e.target.value);
+                        setIsColorDropdownOpen(false);
+                      }}
+                      className="w-full h-11 px-4 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-xl text-slate-900 dark:text-white font-bold text-sm focus:outline-none focus:border-indigo-500 shadow-inner transition-colors cursor-pointer"
+                    >
+                      {storesList.map((store, idx) => {
+                        const displayName = storeNames[store.id] || store.name || `Tienda ${idx + 1}`;
+                        const label = store.id === 'tienda_1'
+                          ? `Tienda 1 - ${displayName}`
+                          : store.id === 'tienda_2'
+                          ? `Tienda 2 - ${displayName}`
+                          : store.id === 'tienda_3'
+                          ? `Tienda 3 - ${displayName}`
+                          : `${displayName} (${store.id})`;
+                        return (
+                          <option key={store.id} value={store.id}>
+                            {label}
+                          </option>
+                        );
+                      })}
+                    </select>
+                  </div>
+                </div>
+
+                {/* 4. Panel de Edición Amplio */}
+                {(() => {
+                  const currentStore = storesList.find(s => s.id === selectedConfigStoreId) || storesList[0] || { id: 'tienda_1', name: 'Tienda Central' };
+                  const currentColorHex = storeColorsState[selectedConfigStoreId] || currentStore.color || DEFAULT_STORE_COLORS[selectedConfigStoreId] || '#6366f1';
+                  const currentTheme = getStoreColor(selectedConfigStoreId, currentColorHex);
+                  const currentName = storeNames[selectedConfigStoreId] ?? currentStore.name;
+                  const isSavingThis = savingStoreId === selectedConfigStoreId;
 
                   return (
-                    <div
-                      key={store.id}
-                      className="bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden"
-                    >
-                      {/* Top colored accent line */}
+                    <div className="bg-white dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm p-6 sm:p-8 space-y-6 relative overflow-hidden">
+                      {/* Acento superior de color */}
                       <div
-                        className="absolute top-0 left-0 right-0 h-1"
+                        className="absolute top-0 left-0 right-0 h-1.5 transition-colors duration-300"
                         style={{ backgroundColor: currentTheme.hex }}
                       />
 
-                      <div className="space-y-4">
-                        {/* 1. Header de Tarjeta */}
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <div
-                              className={`p-2.5 rounded-xl border flex items-center justify-center ${currentTheme.badgeClass}`}
-                            >
-                              <StoreIcon className="w-5 h-5" />
-                            </div>
-                            <div>
-                              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
-                                Identificador
-                              </span>
-                              <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
-                                {store.id}
+                      {/* Header del Panel */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-slate-200 dark:border-slate-800 gap-4">
+                        <div className="flex items-center gap-3">
+                          <div className={`p-3 rounded-2xl border flex items-center justify-center transition-all ${currentTheme.badgeClass}`}>
+                            <StoreIcon className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h4 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">
+                                {currentName || selectedConfigStoreId}
+                              </h4>
+                              <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                Activa
                               </span>
                             </div>
-                          </div>
-
-                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                            Activa
-                          </span>
-                        </div>
-
-                        {/* 2. Campo de Nombre */}
-                        <div className="space-y-1.5">
-                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                            Nombre de la Sucursal
-                          </label>
-                          <input
-                            type="text"
-                            value={currentName}
-                            onChange={e => setStoreNames({ ...storeNames, [store.id]: e.target.value })}
-                            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 shadow-inner"
-                            placeholder="Ej: Sucursal Central..."
-                          />
-                        </div>
-
-                        {/* 3. Selector de Color (Color Picker interactivo) */}
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs">
-                            <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                              <Palette className="w-3.5 h-3.5 text-slate-400" />
-                              <span>Color de Identificación</span>
+                            <span className="font-mono text-xs text-slate-400 block mt-0.5">
+                              Identificador del sistema: #{selectedConfigStoreId}
                             </span>
-                            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                              {currentTheme.name}
-                            </span>
-                          </div>
-
-                          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800/80">
-                            {STORE_PALETTE.map(paletteColor => {
-                              const isSelected = currentColorHex.toLowerCase() === paletteColor.hex.toLowerCase();
-                              return (
-                                <button
-                                  key={paletteColor.id}
-                                  type="button"
-                                  onClick={() => setStoreColorsState({ ...storeColorsState, [store.id]: paletteColor.hex })}
-                                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer relative group active:scale-95 ${
-                                    isSelected
-                                      ? 'ring-2 ring-offset-2 ring-offset-slate-900 ring-white scale-110 shadow-lg'
-                                      : 'hover:scale-105 opacity-80 hover:opacity-100'
-                                  }`}
-                                  style={{ backgroundColor: paletteColor.hex }}
-                                  title={paletteColor.name}
-                                >
-                                  {isSelected && <Check className="w-3.5 h-3.5 text-white drop-shadow stroke-[3]" />}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </div>
-
-                        {/* 4. Vista Previa de Badge */}
-                        <div className="space-y-1.5">
-                          <span className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                            Vista Previa en la Aplicación:
-                          </span>
-                          <div className="p-3 bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-2">
-                            <div className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 ${currentTheme.badgeClass}`}>
-                              <StoreIcon className="w-3.5 h-3.5" />
-                              <span>{currentName || store.id}: 25 uds</span>
-                            </div>
-                            <span className="text-[10px] font-mono text-slate-400">En Matriz / POS</span>
                           </div>
                         </div>
                       </div>
 
-                      {/* 5. Botón de Guardar por Tarjeta */}
-                      <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80">
+                      {/* Grid amplio de campos: Nombre y Selector de Color */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
+                        {/* Campo de Nombre */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Nombre de la Sucursal *
+                          </label>
+                          <input
+                            type="text"
+                            value={currentName}
+                            onChange={e => setStoreNames({ ...storeNames, [selectedConfigStoreId]: e.target.value })}
+                            className="w-full h-11 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-xl px-4 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 shadow-inner transition-colors"
+                            placeholder="Ej: Tienda Central, Sucursal Norte..."
+                          />
+                          <p className="text-[11px] text-slate-400">
+                            Este nombre se mostrará en las pestañas, tickets de venta y reportes de inventario.
+                          </p>
+                        </div>
+
+                        {/* Selector Desplegable de Color (100% Visual, sin texto) */}
+                        <div className="space-y-2">
+                          <label className="block text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Color de Identificación
+                          </label>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={() => setIsColorDropdownOpen(!isColorDropdownOpen)}
+                              className="w-full h-11 px-4 bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 hover:border-slate-400 dark:hover:border-slate-600 rounded-xl flex items-center justify-between transition cursor-pointer shadow-inner"
+                            >
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className="w-6 h-6 rounded-full shadow-md border border-white/20 shrink-0"
+                                  style={{ backgroundColor: currentColorHex }}
+                                />
+                              </div>
+                              <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isColorDropdownOpen ? 'rotate-180' : ''}`} />
+                            </button>
+
+                            {isColorDropdownOpen && (
+                              <>
+                                <div
+                                  className="fixed inset-0 z-20"
+                                  onClick={() => setIsColorDropdownOpen(false)}
+                                />
+                                <div className="absolute left-0 mt-2 z-30 p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl flex flex-wrap gap-2.5 max-w-[280px]">
+                                  {STORE_PALETTE.map((paletteColor) => {
+                                    const isSelected = currentColorHex.toLowerCase() === paletteColor.hex.toLowerCase();
+                                    return (
+                                      <button
+                                        key={paletteColor.id}
+                                        type="button"
+                                        onClick={() => {
+                                          setStoreColorsState(prev => ({ ...prev, [selectedConfigStoreId]: paletteColor.hex }));
+                                          setIsColorDropdownOpen(false);
+                                        }}
+                                        className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer relative active:scale-95 ${
+                                          isSelected
+                                            ? 'ring-2 ring-offset-2 ring-offset-slate-900 ring-white scale-110 shadow-lg'
+                                            : 'hover:scale-105 opacity-80 hover:opacity-100'
+                                        }`}
+                                        style={{ backgroundColor: paletteColor.hex }}
+                                      >
+                                        {isSelected && <Check className="w-3.5 h-3.5 text-white drop-shadow stroke-[3]" />}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </>
+                            )}
+                          </div>
+                          <p className="text-[11px] text-slate-400">
+                            Haz clic en la muestra para desplegar y seleccionar el color temático.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Bloque de Vista Previa (mostrando el badge con el color seleccionado en tiempo real) */}
+                      <div className="p-4 sm:p-5 bg-slate-100 dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold uppercase tracking-wider text-slate-700 dark:text-slate-300">
+                            Vista Previa en Tiempo Real
+                          </span>
+                          <span className="text-[11px] font-mono text-slate-400">
+                            Reflejo en Matriz, Traslados y POS
+                          </span>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-3">
+                          {/* Badge de Tienda */}
+                          <div className={`px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-2 transition-all ${currentTheme.badgeClass}`}>
+                            <StoreIcon className="w-4 h-4" />
+                            <span>{currentName || selectedConfigStoreId}: 25 uds</span>
+                          </div>
+
+                          {/* Botón activo simulado en POS */}
+                          <div className={`px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow transition-all ${currentTheme.activeBtnClass}`}>
+                            <span className="w-2 h-2 rounded-full bg-white/80" />
+                            <StoreIcon className="w-3.5 h-3.5" />
+                            <span>{currentName || selectedConfigStoreId}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Botón inferior: Guardar Cambios */}
+                      <div className="pt-4 border-t border-slate-200 dark:border-slate-800 flex justify-end">
                         <button
                           type="button"
-                          onClick={() => handleSaveStore(store.id)}
+                          onClick={() => handleSaveStore(selectedConfigStoreId)}
                           disabled={isSavingThis}
-                          className="w-full py-2 px-3 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl flex items-center justify-center space-x-1.5 transition cursor-pointer active:scale-95 disabled:opacity-50"
+                          className="w-full sm:w-auto px-6 py-3 bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-bold rounded-xl flex items-center justify-center space-x-2 transition shadow-md shadow-indigo-600/30 cursor-pointer active:scale-95 disabled:opacity-50"
                         >
                           {isSavingThis ? (
                             <>
-                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <RefreshCw className="w-4 h-4 animate-spin" />
                               <span>Guardando...</span>
                             </>
                           ) : (
                             <>
-                              <Save className="w-3.5 h-3.5" />
-                              <span>Guardar Sucursal</span>
+                              <Save className="w-4 h-4" />
+                              <span>Guardar Cambios</span>
                             </>
                           )}
                         </button>
                       </div>
                     </div>
                   );
-                })}
+                })()}
               </div>
             )}
           </div>
