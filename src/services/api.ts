@@ -527,6 +527,19 @@ export const updateStoreApi = async (id: string, name: string, color?: string): 
   return response.json();
 };
 
+export const fetchNextSkuApi = async (): Promise<string> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/products/next-sku`);
+    if (response.ok) {
+      const data = await response.json();
+      return data.next_sku || '0001';
+    }
+  } catch (err) {
+    console.error('Error fetching next_sku:', err);
+  }
+  return '0001';
+};
+
 export const createProductApi = async (data: {
   name: string;
   sku?: string;

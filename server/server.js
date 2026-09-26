@@ -880,6 +880,50 @@ app.get('/api/transfers/in-transit/:product_id', (req, res) => {
   });
 });
 
+// 2a. Obtener siguiente SKU secuencial sugerido (correlativo de 4 dígitos)
+app.get('/api/products/next-sku', async (req, res) => {
+  try {
+    if (isPg && pgPool) {
+      // Extrae la parte numérica más alta registrada y genera el correlativo con 4 dígitos (ej: 0001, 0002)
+      const query = `
+        SELECT LPAD(
+          (COALESCE(MAX(NULLIF(regexp_replace(sku, '\\D', '', 'g'), '')::BIGINT), 0) + 1)::TEXT,
+          4,
+          '0'
+        ) AS next_sku
+        FROM products;
+      `;
+      const result = await pgPool.query(query);
+      return res.json({ next_sku: result.rows[0]?.next_sku || '0001' });
+    }
+
+    // Soporte para SQLite (entorno local de desarrollo)
+    db.all('SELECT sku FROM products', [], (err, rows) => {
+      if (err) {
+        console.error('Error calculando next_sku en SQLite:', err);
+        return res.status(500).json({ error: 'Error al obtener siguiente SKU' });
+      }
+      let maxNum = 0;
+      (rows || []).forEach(r => {
+        if (r.sku) {
+          const numStr = String(r.sku).replace(/\D/g, '');
+          if (numStr) {
+            const val = parseInt(numStr, 10);
+            if (!isNaN(val) && val > maxNum) {
+              maxNum = val;
+            }
+          }
+        }
+      });
+      const nextSku = String(maxNum + 1).padStart(4, '0');
+      res.json({ next_sku: nextSku });
+    });
+  } catch (error) {
+    console.error('Error calculando next_sku:', error);
+    res.status(500).json({ error: 'Error al obtener siguiente SKU' });
+  }
+});
+
 // 2b. Crear producto con distribución de stock inicial multitienda
 app.post('/api/products', (req, res) => {
   const { name, sku, brand, model, description, category, cost_price, sale_price, initial_stocks } = req.body;

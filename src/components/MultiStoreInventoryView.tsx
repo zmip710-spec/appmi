@@ -21,7 +21,8 @@ import {
   Store as StoreIcon,
   PackageCheck,
   Calendar,
-  ChevronDown
+  ChevronDown,
+  Wand2
 } from 'lucide-react';
 import {
   fetchStoresApi,
@@ -33,6 +34,7 @@ import {
   createProductApi,
   deleteProductApi,
   updateProductApi,
+  fetchNextSkuApi,
   Store,
   MatrixProduct,
   InventoryTransfer,
@@ -94,6 +96,33 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
     tienda_3: 0,
   });
   const [isSavingProduct, setIsSavingProduct] = useState(false);
+  const [loadingNextSku, setLoadingNextSku] = useState(false);
+
+  const fetchAndSetNextSku = async () => {
+    setLoadingNextSku(true);
+    try {
+      const nextVal = await fetchNextSkuApi();
+      if (nextVal) {
+        setNewSku(nextVal);
+      }
+    } catch (err) {
+      console.error('Error calculando siguiente SKU:', err);
+    } finally {
+      setLoadingNextSku(false);
+    }
+  };
+
+  useEffect(() => {
+    if (showAddProductModal) {
+      fetchAndSetNextSku();
+    }
+  }, [showAddProductModal]);
+
+  const isSkuDuplicate = useMemo(() => {
+    if (!newSku.trim()) return false;
+    const clean = newSku.trim().toUpperCase();
+    return matrix.some(p => (p.sku || '').trim().toUpperCase() === clean);
+  }, [newSku, matrix]);
 
   // 3. Modal: Entrada Rápida de Stock
   const [stockEntryProduct, setStockEntryProduct] = useState<MatrixProduct | null>(null);
@@ -534,6 +563,11 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
     e.preventDefault();
     if (!newSku.trim() || !newName.trim()) {
       triggerToast('Código SKU y Nombre de producto son requeridos.', 'error');
+      return;
+    }
+
+    if (isSkuDuplicate) {
+      triggerToast(`El código SKU '${newSku.trim().toUpperCase()}' ya existe en el inventario.`, 'error');
       return;
     }
 
@@ -1103,15 +1137,41 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-slate-300 font-semibold uppercase mb-1.5 text-xs">Código SKU Único *</label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="Ej. PROD-005"
-                        value={newSku}
-                        onChange={(e) => setNewSku(e.target.value)}
-                        className="w-full h-11 px-3.5 bg-slate-950 border border-slate-700 rounded-xl text-white font-mono text-sm focus:border-indigo-500 focus:outline-none transition-colors"
-                      />
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-slate-300 font-semibold uppercase text-xs">
+                          Código SKU Único *
+                        </label>
+                        <span className="text-[10px] text-slate-400">Sugerido o editable</span>
+                      </div>
+                      <div className="relative flex items-center">
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ej. 0001 / PROD-005"
+                          value={newSku}
+                          onChange={(e) => setNewSku(e.target.value)}
+                          className={`w-full h-11 pl-3.5 pr-11 bg-slate-950 border rounded-xl text-white font-mono text-sm focus:outline-none transition-colors ${
+                            isSkuDuplicate
+                              ? 'border-rose-500 text-rose-300 focus:border-rose-500 ring-1 ring-rose-500/20'
+                              : 'border-slate-700 focus:border-indigo-500'
+                          }`}
+                        />
+                        <button
+                          type="button"
+                          onClick={fetchAndSetNextSku}
+                          disabled={loadingNextSku}
+                          title="Generar correlativo"
+                          className="absolute right-1.5 h-8 w-8 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-indigo-400 border border-slate-700/80 flex items-center justify-center transition-colors cursor-pointer disabled:opacity-50"
+                        >
+                          <Wand2 className={`w-4 h-4 ${loadingNextSku ? 'animate-spin text-indigo-400' : ''}`} />
+                        </button>
+                      </div>
+                      {isSkuDuplicate && (
+                        <div className="flex items-center gap-1.5 text-xs text-rose-400 mt-1.5 bg-rose-500/10 border border-rose-500/20 px-2.5 py-1 rounded-lg animate-in fade-in">
+                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                          <span>Este código SKU ya existe en el inventario. Ingresa uno diferente o genera otro correlativo.</span>
+                        </div>
+                      )}
                     </div>
 
                     <div>
