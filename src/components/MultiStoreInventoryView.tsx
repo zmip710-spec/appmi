@@ -1579,7 +1579,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <h3 className="font-bold text-white text-base flex items-center gap-2">
                 <Plus className="w-5 h-5 text-emerald-400" />
-                Cargar Entrada de Stock
+                Agregar Unidades
               </h3>
               <button onClick={() => setStockEntryProduct(null)} className="text-slate-400 hover:text-white p-1 cursor-pointer">
                 <X className="w-5 h-5" />
@@ -1718,33 +1718,42 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                           return (
                             <div
                               key={s.id}
-                              className={`p-3.5 rounded-xl text-center space-y-1 transition-all ${
-                                qty > 0
-                                  ? `${stCol.bgClass} border ${stCol.borderClass}/40`
-                                  : 'bg-slate-900 border border-slate-800/90'
-                              }`}
+                              className={`p-3.5 sm:p-4 rounded-xl text-center space-y-1.5 transition-all bg-slate-900/90 border ${stCol.borderClass}/40 hover:${stCol.borderClass}/60 shadow-sm`}
+                              style={{ borderColor: `${stCol.hex}40` }}
                             >
-                              <div className="flex items-center justify-center gap-1.5">
-                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stCol.hex }} />
-                                <span className={`text-[11px] font-bold block truncate ${qty > 0 ? stCol.textClass : 'text-slate-400'}`}>
+                              <div className="flex items-center justify-center gap-1.5 min-w-0">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                                  style={{ backgroundColor: stCol.hex }}
+                                />
+                                <span className="text-xs sm:text-sm font-bold text-slate-200 block truncate">
                                   {s.name}
                                 </span>
                               </div>
-                              <span className={`text-2xl font-black font-mono block ${qty > 0 ? 'text-white' : 'text-slate-600'}`}>
+                              <span className="text-2xl sm:text-3xl font-bold font-mono text-white block">
                                 {qty}
                               </span>
-                              <span className="text-[10px] text-slate-500 block uppercase font-mono">unidades</span>
+                              <span className="text-xs text-slate-400 font-semibold tracking-wider block uppercase">
+                                UNIDADES
+                              </span>
                             </div>
                           );
                         })}
 
                         {/* 4ta caja: En Tránsito */}
-                        <div className="bg-amber-950/20 border border-amber-500/30 p-3.5 rounded-xl text-center space-y-1">
-                          <span className="text-[11px] font-semibold text-amber-400 block truncate">En Tránsito</span>
-                          <span className={`text-2xl font-black font-mono block ${transitTotal > 0 ? 'text-amber-400' : 'text-slate-600'}`}>
+                        <div className="bg-amber-950/20 border border-amber-500/30 p-3.5 sm:p-4 rounded-xl text-center space-y-1.5 transition-all shadow-sm">
+                          <div className="flex items-center justify-center gap-1.5 min-w-0">
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 shadow-sm" />
+                            <span className="text-xs sm:text-sm font-bold text-amber-400 block truncate">
+                              En Tránsito
+                            </span>
+                          </div>
+                          <span className={`text-2xl sm:text-3xl font-bold font-mono block ${transitTotal > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
                             {transitTotal}
                           </span>
-                          <span className="text-[10px] text-amber-500/70 block uppercase font-mono">en camino</span>
+                          <span className="text-xs text-slate-400 font-semibold tracking-wider block uppercase">
+                            EN CAMINO
+                          </span>
                         </div>
                       </div>
 
@@ -1977,8 +1986,11 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                         {/* 1. Selector Origen (3 cols) */}
                         <div className="lg:col-span-3 space-y-1.5">
                           <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 inline-block"></span>
-                            Tienda Origen (Salida) *
+                            <span
+                              className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-sm transition-colors"
+                              style={{ backgroundColor: getColor(quickTransferFromId).hex }}
+                            />
+                            <span>Tienda Origen (Salida) *</span>
                           </label>
                           <select
                             value={quickTransferFromId}
@@ -2010,8 +2022,11 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                         {/* 2. Selector Destino (3 cols) */}
                         <div className="lg:col-span-3 space-y-1.5">
                           <label className="text-[11px] font-medium text-slate-300 flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 inline-block"></span>
-                            Tienda Destino (Entrada) *
+                            <span
+                              className="w-2.5 h-2.5 rounded-full inline-block shrink-0 shadow-sm transition-colors"
+                              style={{ backgroundColor: getColor(quickTransferToId).hex }}
+                            />
+                            <span>Tienda Destino (Entrada) *</span>
                           </label>
                           <select
                             value={quickTransferToId}
@@ -2137,7 +2152,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                 className="h-10 px-5 inline-flex items-center gap-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-lg shadow-emerald-600/20"
               >
                 <Plus className="w-4 h-4" />
-                <span>Cargar Entrada de Stock</span>
+                <span>Agregar Unidades</span>
               </button>
 
               {currentUser?.role !== 'Vendedor' && (

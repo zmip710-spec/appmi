@@ -37,6 +37,7 @@ import {
   Store,
   User
 } from '../services/api';
+import { getStoreColor } from '../utils/storeColors';
 
 interface InventoryViewProps {
   currentUser?: User | null;
@@ -902,25 +903,47 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
                           if (s.id === 'tienda_1') qty = s1;
                           else if (s.id === 'tienda_2') qty = s2;
                           else if (s.id === 'tienda_3') qty = s3;
+                          const stCol = getStoreColor(s.id, s.color);
 
                           return (
-                            <div key={s.id} className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl text-center space-y-1">
-                              <span className="text-xs font-semibold text-slate-400 block truncate">{s.name}</span>
-                              <span className={`text-2xl font-black font-mono block ${qty > 0 ? 'text-white' : 'text-slate-600'}`}>
+                            <div
+                              key={s.id}
+                              className={`p-3.5 sm:p-4 rounded-xl text-center space-y-1.5 transition-all bg-slate-900/90 border ${stCol.borderClass}/40 hover:${stCol.borderClass}/60 shadow-sm`}
+                              style={{ borderColor: `${stCol.hex}40` }}
+                            >
+                              <div className="flex items-center justify-center gap-1.5 min-w-0">
+                                <span
+                                  className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                                  style={{ backgroundColor: stCol.hex }}
+                                />
+                                <span className="text-xs sm:text-sm font-bold text-slate-200 block truncate">
+                                  {s.name}
+                                </span>
+                              </div>
+                              <span className="text-2xl sm:text-3xl font-bold font-mono text-white block">
                                 {qty}
                               </span>
-                              <span className="text-[10px] text-slate-500 block uppercase">unidades</span>
+                              <span className="text-xs text-slate-400 font-semibold tracking-wider block uppercase">
+                                UNIDADES
+                              </span>
                             </div>
                           );
                         })}
 
                         {/* Caja: En Tránsito */}
-                        <div className="bg-amber-950/20 border border-amber-500/30 p-3.5 rounded-xl text-center space-y-1">
-                          <span className="text-xs font-semibold text-amber-400 block truncate">En Tránsito</span>
-                          <span className={`text-2xl font-black font-mono block ${transitTotal > 0 ? 'text-amber-400' : 'text-slate-600'}`}>
+                        <div className="bg-amber-950/20 border border-amber-500/30 p-3.5 sm:p-4 rounded-xl text-center space-y-1.5 transition-all shadow-sm">
+                          <div className="flex items-center justify-center gap-1.5 min-w-0">
+                            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0 shadow-sm" />
+                            <span className="text-xs sm:text-sm font-bold text-amber-400 block truncate">
+                              En Tránsito
+                            </span>
+                          </div>
+                          <span className={`text-2xl sm:text-3xl font-bold font-mono block ${transitTotal > 0 ? 'text-amber-400' : 'text-slate-500'}`}>
                             {transitTotal}
                           </span>
-                          <span className="text-[10px] text-amber-500/70 block uppercase">en camino</span>
+                          <span className="text-xs text-slate-400 font-semibold tracking-wider block uppercase">
+                            EN CAMINO
+                          </span>
                         </div>
                       </div>
 
@@ -1006,7 +1029,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
                 className="h-10 px-5 inline-flex items-center gap-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-lg shadow-emerald-600/20"
               >
                 <Plus className="w-4 h-4" />
-                <span>Cargar Entrada de Stock</span>
+                <span>Agregar Unidades</span>
               </button>
             </div>
 
@@ -1450,7 +1473,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
                   <Plus className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-white text-base">+ Cargar Entrada de Stock</h3>
+                  <h3 className="font-bold text-white text-base">+ Agregar Unidades</h3>
                   <span className="text-xs text-indigo-400 font-mono font-bold">{stockEntryModalProduct.sku} — {stockEntryModalProduct.name}</span>
                 </div>
               </div>
