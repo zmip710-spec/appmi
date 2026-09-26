@@ -1676,10 +1676,8 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
           {/* 2. Cuerpo central scrolleable */}
           <div className="flex-1 w-full px-8 py-8 overflow-y-auto">
             <div className="max-w-7xl mx-auto w-full space-y-6">
-              {/* Grid 2 Columnas Lado a Lado: Existencias Multitienda y Precios Comerciales */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-              {/* Columna Izquierda (7 cols): Desglose de Existencias por Sucursal */}
-              <div className="lg:col-span-7 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 space-y-4">
+              {/* Tarjeta Unificada a Ancho Completo: Existencias y Precios Comerciales */}
+              <div className="w-full bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 sm:p-6 space-y-4">
                 {(() => {
                   const s1 = selectedDetailMatrix?.stock_tienda_1 ?? 0;
                   const s2 = selectedDetailMatrix?.stock_tienda_2 ?? 0;
@@ -1690,24 +1688,208 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
                   return (
                     <>
-                      <div className="flex items-center justify-between gap-3 w-full border-b border-slate-800/80 pb-3">
-                        <span className="font-extrabold text-indigo-400 text-xs uppercase tracking-wider flex items-center gap-2 shrink-0">
-                          <Building2 className="w-4 h-4" />
-                          Existencias Físicas Multitienda
-                        </span>
-                        <div className="flex items-center gap-2">
+                      {/* Cabecera unificada con botones de acción */}
+                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full border-b border-slate-800/80 pb-4">
+                        {/* Izquierda: Título EXISTENCIAS y al lado el selector/botón de PRECIOS COMERCIALES (Q) [Editar] */}
+                        <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
+                          <span className="font-extrabold text-indigo-400 text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2 shrink-0">
+                            <Building2 className="w-4 h-4" />
+                            EXISTENCIAS
+                          </span>
+
+                          <div className="h-4 w-px bg-slate-700/80 hidden sm:block shrink-0" />
+
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-300 font-medium">
+                              <DollarSign className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">PRECIOS COMERCIALES (Q):</span>
+                              <span className="font-mono text-slate-200">
+                                Venta <strong className="text-emerald-400 font-bold">Q {(selectedDetailProduct.sale_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                              </span>
+                              <span className="text-slate-400 font-mono text-[11px]">
+                                (Costo: Q {(selectedDetailProduct.cost_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })})
+                              </span>
+                            </div>
+
+                            {currentUser?.role !== 'Vendedor' && !isEditingPrices && (
+                              <button
+                                type="button"
+                                onClick={() => setIsEditingPrices(true)}
+                                className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-2.5 py-1 rounded-lg border border-indigo-500/20 transition cursor-pointer ml-0.5"
+                                title="Editar precios comerciales"
+                              >
+                                <Pencil className="w-3 h-3" />
+                                <span>Editar</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Derecha: Botón + Agregar Unidades, botón Eliminar SKU y el badge Total: X uds */}
+                        <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const prod = selectedDetailProduct;
+                              setSelectedDetailProduct(null);
+                              setStockEntryProduct(prod);
+                              setStockEntryStoreId(stores[0]?.id || 'tienda_1');
+                              setStockEntryQty(1);
+                            }}
+                            className="h-8 px-3.5 inline-flex items-center gap-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-sm shadow-emerald-600/20"
+                          >
+                            <Plus className="w-3.5 h-3.5" />
+                            <span>+ Agregar Unidades</span>
+                          </button>
+
+                          {currentUser?.role !== 'Vendedor' && (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const prod = selectedDetailProduct;
+                                setSelectedDetailProduct(null);
+                                setDeleteConfirmProduct(prod);
+                              }}
+                              className="h-8 px-3 inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30 hover:bg-rose-500/25 transition-colors cursor-pointer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                              <span>Eliminar SKU</span>
+                            </button>
+                          )}
+
                           <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap font-mono">
                             Total: {grandTotal} uds
                           </span>
-                          {transitTotal > 0 && (
-                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap font-mono">
-                              🚚 {transitTotal} en camino
-                            </span>
-                          )}
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                      {/* Editor de Precios Inline si isEditingPrices está activo */}
+                      {isEditingPrices && (
+                        <div className="p-4 rounded-xl bg-slate-900/90 border border-indigo-500/30 space-y-3 animate-in fade-in duration-150">
+                          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                            <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
+                              <DollarSign className="w-3.5 h-3.5" />
+                              Editar Precios Comerciales (Q)
+                            </span>
+                            <div className="inline-flex bg-slate-950 p-0.5 rounded border border-slate-700/60 text-[10px]">
+                              <button
+                                type="button"
+                                onClick={() => setEditPricingMode('fixed')}
+                                className={`px-2 py-0.5 rounded cursor-pointer transition ${
+                                  editPricingMode === 'fixed'
+                                    ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                              >
+                                Fijo (Q)
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setEditPricingMode('margin')}
+                                className={`px-2 py-0.5 rounded cursor-pointer transition ${
+                                  editPricingMode === 'margin'
+                                    ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                                    : 'text-slate-400 hover:text-slate-200'
+                                }`}
+                              >
+                                Margen (%)
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
+                            {/* Columna Costo */}
+                            <div>
+                              <label className="block text-xs font-semibold text-slate-400 mb-1.5">PRECIO COSTO (Q)</label>
+                              <input
+                                type="number"
+                                step="0.01"
+                                min="0"
+                                value={editCostPrice}
+                                onChange={(e) => setEditCostPrice(e.target.value)}
+                                className="h-9 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
+                              />
+                            </div>
+
+                            {/* Columna Venta */}
+                            <div>
+                              <label className="block text-xs font-semibold text-emerald-400 mb-1.5">
+                                {editPricingMode === 'fixed' ? 'PRECIO VENTA (Q)' : 'MARGEN DESEADO (%)'}
+                              </label>
+                              {editPricingMode === 'fixed' ? (
+                                <>
+                                  <input
+                                    type="number"
+                                    step="0.01"
+                                    min="0"
+                                    value={editSalePrice}
+                                    onChange={(e) => setEditSalePrice(e.target.value)}
+                                    className="h-9 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
+                                  />
+                                  {(() => {
+                                    const cost = parseFloat(editCostPrice) || 0;
+                                    const sale = parseFloat(editSalePrice) || 0;
+                                    const profit = sale - cost;
+                                    const pct = cost > 0 ? (profit / cost) * 100 : 0;
+                                    return (
+                                      <div className="mt-1 text-[11px] text-slate-400 font-mono truncate">
+                                        Margen: +{pct.toFixed(1)}% (Q {profit.toFixed(2)})
+                                      </div>
+                                    );
+                                  })()}
+                                </>
+                              ) : (
+                                <>
+                                  <input
+                                    type="number"
+                                    step="0.1"
+                                    min="0"
+                                    value={editMarginPercent}
+                                    onChange={(e) => setEditMarginPercent(e.target.value)}
+                                    className="h-9 w-full rounded-lg bg-slate-950 border border-emerald-500/40 px-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
+                                  />
+                                  {(() => {
+                                    const cost = parseFloat(editCostPrice) || 0;
+                                    const margin = parseFloat(editMarginPercent) || 0;
+                                    const calcSale = cost * (1 + margin / 100);
+                                    return (
+                                      <div className="mt-1 text-[11px] text-emerald-400 font-mono font-bold truncate">
+                                        Venta estimada: Q {calcSale.toFixed(2)}
+                                      </div>
+                                    );
+                                  })()}
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setIsEditingPrices(false);
+                                setEditCostPrice((selectedDetailProduct.cost_price || 0).toString());
+                                setEditSalePrice((selectedDetailProduct.sale_price || 0).toString());
+                              }}
+                              className="h-8 px-3 text-xs font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleSavePrices}
+                              disabled={isSavingPrices}
+                              className="h-8 px-3.5 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                              <span>{isSavingPrices ? 'Guardando...' : 'Guardar Precios'}</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Fila única de 4 tarjetas de stock (Tiendas + En Tránsito) */}
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full pt-1">
                         {stores.map(s => {
                           let qty = 0;
                           if (s.id === 'tienda_1') qty = s1;
@@ -1781,180 +1963,6 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                   );
                 })()}
               </div>
-
-              {/* Columna Derecha (5 cols): Precios Comerciales */}
-              <div className="lg:col-span-5 bg-slate-950/70 border border-slate-800/90 rounded-2xl p-5 space-y-4">
-                <div className="flex items-center justify-between pb-3 border-b border-slate-800/80 w-full">
-                  <div className="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2">
-                    <DollarSign className="w-4 h-4 text-indigo-400" />
-                    <span>Precios Comerciales (Q)</span>
-                  </div>
-                  {currentUser?.role !== 'Vendedor' && !isEditingPrices && (
-                    <button
-                      onClick={() => setIsEditingPrices(true)}
-                      className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-3 py-1 rounded-lg border border-indigo-500/20 transition cursor-pointer"
-                    >
-                      <Pencil className="w-3.5 h-3.5" />
-                      <span>Editar</span>
-                    </button>
-                  )}
-                </div>
-
-                {!isEditingPrices ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="bg-slate-900 border border-slate-800 p-3.5 rounded-xl space-y-1">
-                        <span className="text-[11px] font-semibold text-slate-400 block uppercase">Precio de Costo</span>
-                        <span className="text-lg font-extrabold font-mono text-slate-100 block">
-                          Q {(selectedDetailProduct.cost_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                      <div className="bg-emerald-950/20 border border-emerald-500/20 p-3.5 rounded-xl space-y-1">
-                        <span className="text-[11px] font-semibold text-emerald-400 block uppercase">Precio de Venta</span>
-                        <span className="text-lg font-black font-mono text-emerald-400 block">
-                          Q {(selectedDetailProduct.sale_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </span>
-                      </div>
-                    </div>
-
-                    {(() => {
-                      const cost = selectedDetailProduct.cost_price || 0;
-                      const sale = selectedDetailProduct.sale_price || 0;
-                      const profit = sale - cost;
-                      const margin = cost > 0 ? (profit / cost) * 100 : 0;
-
-                      return (
-                        <div className="p-3 bg-slate-900/80 border border-slate-800 rounded-xl flex items-center justify-between text-xs font-mono">
-                          <span className="text-slate-400">Margen Comercial:</span>
-                          <span className={`font-bold ${profit >= 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
-                            +Q {profit.toFixed(2)} ({margin.toFixed(1)}%)
-                          </span>
-                        </div>
-                      );
-                    })()}
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-start">
-                      {/* Columna Costo */}
-                      <div>
-                        <label className="block text-xs font-semibold text-slate-400 mb-1.5">PRECIO COSTO (Q)</label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={editCostPrice}
-                          onChange={(e) => setEditCostPrice(e.target.value)}
-                          className="h-10 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
-                        />
-                      </div>
-
-                      {/* Columna Venta */}
-                      <div>
-                        <label className="block text-xs font-semibold text-emerald-400 mb-1.5">
-                          {editPricingMode === 'fixed' ? 'PRECIO VENTA (Q)' : 'MARGEN DESEADO (%)'}
-                        </label>
-                        {editPricingMode === 'fixed' ? (
-                          <>
-                            <input
-                              type="number"
-                              step="0.01"
-                              min="0"
-                              value={editSalePrice}
-                              onChange={(e) => setEditSalePrice(e.target.value)}
-                              className="h-10 w-full rounded-lg bg-slate-900 border border-slate-700 px-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
-                            />
-                            {(() => {
-                              const cost = parseFloat(editCostPrice) || 0;
-                              const sale = parseFloat(editSalePrice) || 0;
-                              const profit = sale - cost;
-                              const pct = cost > 0 ? (profit / cost) * 100 : 0;
-                              return (
-                                <div className="mt-1 text-[11px] text-slate-400 font-mono truncate">
-                                  Margen: +{pct.toFixed(1)}% (Q {profit.toFixed(2)})
-                                </div>
-                              );
-                            })()}
-                          </>
-                        ) : (
-                          <>
-                            <input
-                              type="number"
-                              step="0.1"
-                              min="0"
-                              value={editMarginPercent}
-                              onChange={(e) => setEditMarginPercent(e.target.value)}
-                              className="h-10 w-full rounded-lg bg-slate-900 border border-emerald-500/40 px-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
-                            />
-                            {(() => {
-                              const cost = parseFloat(editCostPrice) || 0;
-                              const margin = parseFloat(editMarginPercent) || 0;
-                              const calcSale = cost * (1 + margin / 100);
-                              return (
-                                <div className="mt-1 text-[11px] text-emerald-400 font-mono font-bold truncate">
-                                  Venta: Q {calcSale.toFixed(2)}
-                                </div>
-                              );
-                            })()}
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Barra Inferior de Controles */}
-                    <div className="flex items-center justify-between pt-2 border-t border-slate-800 w-full">
-                      <div className="inline-flex bg-slate-900 p-0.5 rounded border border-slate-700/60 text-[10px] shrink-0">
-                        <button
-                          type="button"
-                          onClick={() => setEditPricingMode('fixed')}
-                          className={`px-2 py-0.5 rounded cursor-pointer transition ${
-                            editPricingMode === 'fixed'
-                              ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          Fijo (Q)
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setEditPricingMode('margin')}
-                          className={`px-2 py-0.5 rounded cursor-pointer transition ${
-                            editPricingMode === 'margin'
-                              ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
-                              : 'text-slate-400 hover:text-slate-200'
-                          }`}
-                        >
-                          Margen (%)
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setIsEditingPrices(false);
-                            setEditCostPrice((selectedDetailProduct.cost_price || 0).toString());
-                            setEditSalePrice((selectedDetailProduct.sale_price || 0).toString());
-                          }}
-                          className="h-8 px-3 text-xs font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
-                        >
-                          Cancelar
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleSavePrices}
-                          disabled={isSavingPrices}
-                          className="h-8 px-3.5 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                        >
-                          <Check className="w-3.5 h-3.5" />
-                          <span>{isSavingPrices ? 'Guardando...' : 'Guardar'}</span>
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
 
             {/* Panel dedicado inferior: Mover existencias entre sucursales */}
             {(() => {
@@ -2138,39 +2146,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
         </div>
 
         {/* 3. Footer fijo inferior */}
-          <div className="w-full px-8 py-4 border-t border-slate-800 bg-slate-900/95 flex justify-between items-center shrink-0">
-            <div className="flex items-center gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  const prod = selectedDetailProduct;
-                  setSelectedDetailProduct(null);
-                  setStockEntryProduct(prod);
-                  setStockEntryStoreId(stores[0]?.id || 'tienda_1');
-                  setStockEntryQty(1);
-                }}
-                className="h-10 px-5 inline-flex items-center gap-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-lg shadow-emerald-600/20"
-              >
-                <Plus className="w-4 h-4" />
-                <span>Agregar Unidades</span>
-              </button>
-
-              {currentUser?.role !== 'Vendedor' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    const prod = selectedDetailProduct;
-                    setSelectedDetailProduct(null);
-                    setDeleteConfirmProduct(prod);
-                  }}
-                  className="h-10 px-4 inline-flex items-center gap-2 text-xs font-semibold rounded-xl bg-rose-500/15 text-rose-400 border border-rose-500/30 hover:bg-rose-500/25 transition-colors cursor-pointer"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Eliminar SKU</span>
-                </button>
-              )}
-            </div>
-
+          <div className="w-full px-8 py-4 border-t border-slate-800 bg-slate-900/95 flex justify-end items-center shrink-0">
             <button
               type="button"
               onClick={() => setSelectedDetailProduct(null)}
