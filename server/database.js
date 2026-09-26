@@ -206,9 +206,11 @@ async function initPgTables() {
     await pgPool.query(`
       CREATE TABLE IF NOT EXISTS stores (
         id VARCHAR(255) PRIMARY KEY,
-        name VARCHAR(255) NOT NULL
+        name VARCHAR(255) NOT NULL,
+        color VARCHAR(50) DEFAULT '#6366f1'
       );
     `);
+    await pgPool.query(`ALTER TABLE stores ADD COLUMN IF NOT EXISTS color VARCHAR(50) DEFAULT '#6366f1'`).catch(() => {});
 
     // 8. Catálogo Maestro de Productos
     await pgPool.query(`
@@ -367,10 +369,10 @@ async function initPgTables() {
 
     // SEED: Tiendas por defecto
     await pgPool.query(`
-      INSERT INTO stores (id, name) VALUES 
-      ('tienda_1', 'Tienda Central'),
-      ('tienda_2', 'Sucursal Norte'),
-      ('tienda_3', 'Sucursal Sur')
+      INSERT INTO stores (id, name, color) VALUES 
+      ('tienda_1', 'Tienda Central', '#6366f1'),
+      ('tienda_2', 'Sucursal Norte', '#10b981'),
+      ('tienda_3', 'Sucursal Sur', '#f59e0b')
       ON CONFLICT (id) DO NOTHING;
     `);
 
@@ -503,16 +505,23 @@ function initSqliteTables() {
       sqliteDb.run(`
         CREATE TABLE IF NOT EXISTS stores (
           id TEXT PRIMARY KEY,
-          name TEXT NOT NULL
+          name TEXT NOT NULL,
+          color TEXT DEFAULT '#6366f1'
         )
       `);
 
+      sqliteDb.run("ALTER TABLE stores ADD COLUMN color TEXT DEFAULT '#6366f1'", () => {});
+
       sqliteDb.run(`
-        INSERT OR IGNORE INTO stores (id, name) VALUES 
-        ('tienda_1', 'Tienda Central'),
-        ('tienda_2', 'Sucursal Norte'),
-        ('tienda_3', 'Sucursal Sur')
+        INSERT OR IGNORE INTO stores (id, name, color) VALUES 
+        ('tienda_1', 'Tienda Central', '#6366f1'),
+        ('tienda_2', 'Sucursal Norte', '#10b981'),
+        ('tienda_3', 'Sucursal Sur', '#f59e0b')
       `);
+
+      sqliteDb.run("UPDATE stores SET color = '#6366f1' WHERE id = 'tienda_1' AND (color IS NULL OR color = '')", () => {});
+      sqliteDb.run("UPDATE stores SET color = '#10b981' WHERE id = 'tienda_2' AND (color IS NULL OR color = '')", () => {});
+      sqliteDb.run("UPDATE stores SET color = '#f59e0b' WHERE id = 'tienda_3' AND (color IS NULL OR color = '')", () => {});
 
       // Seed default users in SQLite if not exist
       sqliteDb.run(`

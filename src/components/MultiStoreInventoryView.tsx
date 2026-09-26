@@ -37,12 +37,14 @@ import {
   InventoryTransfer,
   User
 } from '../services/api';
+import { useStoreColors } from '../utils/storeColors';
 
 interface MultiStoreInventoryViewProps {
   currentUser?: User | null;
 }
 
 export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = ({ currentUser }) => {
+  const { getColor } = useStoreColors();
   const [activeTab, setActiveTab] = useState<'matrix' | 'transfers'>('matrix');
   const [stores, setStores] = useState<Store[]>([]);
   const [matrix, setMatrix] = useState<MatrixProduct[]>([]);
@@ -650,9 +652,24 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
               <tr>
                 <th className="py-4 px-4">SKU</th>
                 <th className="py-4 px-4">Producto</th>
-                <th className="py-4 px-3 text-center">{getStoreName('tienda_1')}</th>
-                <th className="py-4 px-3 text-center">{getStoreName('tienda_2')}</th>
-                <th className="py-4 px-3 text-center">{getStoreName('tienda_3')}</th>
+                <th className="py-3 px-3 text-center">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_1').badgeClass}`}>
+                    <StoreIcon className="w-3 h-3 shrink-0" />
+                    <span>{getStoreName('tienda_1')}</span>
+                  </span>
+                </th>
+                <th className="py-3 px-3 text-center">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_2').badgeClass}`}>
+                    <StoreIcon className="w-3 h-3 shrink-0" />
+                    <span>{getStoreName('tienda_2')}</span>
+                  </span>
+                </th>
+                <th className="py-3 px-3 text-center">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_3').badgeClass}`}>
+                    <StoreIcon className="w-3 h-3 shrink-0" />
+                    <span>{getStoreName('tienda_3')}</span>
+                  </span>
+                </th>
                 <th className="py-4 px-3 text-center text-amber-400">En Tránsito</th>
                 <th className="py-4 px-4 text-center">Stock Total</th>
                 <th className="py-4 px-4 text-right">Precio Costo</th>
@@ -696,7 +713,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                         {/* Stock Tienda Central */}
                         <td className="py-4 px-3 text-center">
                           {s1 > 0 ? (
-                            <span className="inline-flex items-center justify-center min-w-[2.2rem] px-2 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-100 border border-slate-700">
+                            <span className={`inline-flex items-center justify-center min-w-[2.2rem] px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${getColor('tienda_1').badgeClass}`}>
                               {s1}
                             </span>
                           ) : (
@@ -707,7 +724,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                         {/* Stock Sucursal Norte */}
                         <td className="py-4 px-3 text-center">
                           {s2 > 0 ? (
-                            <span className="inline-flex items-center justify-center min-w-[2.2rem] px-2 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-100 border border-slate-700">
+                            <span className={`inline-flex items-center justify-center min-w-[2.2rem] px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${getColor('tienda_2').badgeClass}`}>
                               {s2}
                             </span>
                           ) : (
@@ -718,7 +735,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                         {/* Stock Sucursal Sur */}
                         <td className="py-4 px-3 text-center">
                           {s3 > 0 ? (
-                            <span className="inline-flex items-center justify-center min-w-[2.2rem] px-2 py-0.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-100 border border-slate-700">
+                            <span className={`inline-flex items-center justify-center min-w-[2.2rem] px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${getColor('tienda_3').badgeClass}`}>
                               {s3}
                             </span>
                           ) : (
@@ -842,14 +859,22 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                       )}
                     </div>
 
-                    {/* Columna 2: Ruta (Tienda 1 -> Tienda 2) */}
-                    <div className="sm:col-span-1 lg:col-span-3 flex items-center gap-1.5 text-xs text-slate-200 font-semibold min-w-0">
-                      <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700/60 truncate" title={fromName}>
-                        {fromName}
+                    {/* Columna 2: Ruta (Tienda Origen -> Tienda Destino) */}
+                    <div className="sm:col-span-1 lg:col-span-3 flex items-center gap-1.5 text-xs font-semibold min-w-0">
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold truncate max-w-[130px] ${getColor(transfer.from_store_id).badgeClass}`}
+                        title={fromName}
+                      >
+                        <StoreIcon className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{fromName}</span>
                       </span>
                       <ArrowRight className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-                      <span className="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700/60 truncate" title={toName}>
-                        {toName}
+                      <span
+                        className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-bold truncate max-w-[130px] ${getColor(transfer.to_store_id).badgeClass}`}
+                        title={toName}
+                      >
+                        <StoreIcon className="w-3 h-3 shrink-0" />
+                        <span className="truncate">{toName}</span>
                       </span>
                     </div>
 
@@ -1157,8 +1182,8 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                       >
                         {/* Izquierda: Ícono + nombre/sucursal */}
                         <div className="flex items-center gap-3 min-w-0">
-                          <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
-                            <Building2 className="w-4 h-4" />
+                          <div className={`p-2.5 rounded-xl border flex items-center justify-center shrink-0 ${getColor(store.id).badgeClass}`}>
+                            <StoreIcon className="w-4 h-4" />
                           </div>
                           <div className="min-w-0">
                             <span className="font-bold text-white text-xs sm:text-sm block truncate">{store.name}</span>
@@ -1314,16 +1339,22 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                   </div>
 
                   {/* Resumen visual de la ruta */}
-                  <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center justify-between text-xs font-mono text-slate-300">
+                  <div className="p-2.5 bg-slate-950/60 border border-slate-800 rounded-lg flex items-center justify-between text-xs text-slate-300">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-200">{getStoreName(fromStoreId)}</span>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor(fromStoreId).badgeClass}`}>
+                        <StoreIcon className="w-3.5 h-3.5 shrink-0" />
+                        <span>{getStoreName(fromStoreId)}</span>
+                      </span>
                     </div>
-                    <div className="flex items-center gap-2 text-indigo-400 font-sans text-[11px] font-semibold">
+                    <div className="flex items-center gap-1.5 text-indigo-400 font-sans text-[11px] font-semibold">
                       <ArrowRight className="w-4 h-4 text-slate-400 animate-pulse" />
                       <span>En tránsito</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-slate-200">{getStoreName(toStoreId)}</span>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor(toStoreId).badgeClass}`}>
+                        <StoreIcon className="w-3.5 h-3.5 shrink-0" />
+                        <span>{getStoreName(toStoreId)}</span>
+                      </span>
                     </div>
                   </div>
 
@@ -1682,10 +1713,23 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                           if (s.id === 'tienda_1') qty = s1;
                           else if (s.id === 'tienda_2') qty = s2;
                           else if (s.id === 'tienda_3') qty = s3;
+                          const stCol = getColor(s.id);
 
                           return (
-                            <div key={s.id} className="bg-slate-900 border border-slate-800/90 p-3.5 rounded-xl text-center space-y-1">
-                              <span className="text-[11px] font-semibold text-slate-400 block truncate">{s.name}</span>
+                            <div
+                              key={s.id}
+                              className={`p-3.5 rounded-xl text-center space-y-1 transition-all ${
+                                qty > 0
+                                  ? `${stCol.bgClass} border ${stCol.borderClass}/40`
+                                  : 'bg-slate-900 border border-slate-800/90'
+                              }`}
+                            >
+                              <div className="flex items-center justify-center gap-1.5">
+                                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: stCol.hex }} />
+                                <span className={`text-[11px] font-bold block truncate ${qty > 0 ? stCol.textClass : 'text-slate-400'}`}>
+                                  {s.name}
+                                </span>
+                              </div>
                               <span className={`text-2xl font-black font-mono block ${qty > 0 ? 'text-white' : 'text-slate-600'}`}>
                                 {qty}
                               </span>
@@ -2227,13 +2271,18 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                 </span>
                 <div className="grid grid-cols-1 md:grid-cols-11 gap-3 items-center bg-slate-950/70 border border-slate-800 p-3 rounded-lg">
                   {/* Origen */}
-                  <div className="md:col-span-5 text-center sm:text-left space-y-1 p-3.5 rounded-lg bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Origen (Salida de Stock)</span>
-                    <div className="font-bold text-sm sm:text-base text-slate-100 flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-emerald-400 shrink-0" />
-                      <span>{selectedDetailTransfer.from_store_name || getStoreName(selectedDetailTransfer.from_store_id)}</span>
-                    </div>
-                  </div>
+                  {(() => {
+                    const fromCol = getColor(selectedDetailTransfer.from_store_id);
+                    return (
+                      <div className={`md:col-span-5 text-center sm:text-left space-y-1 p-3.5 rounded-lg border ${fromCol.borderClass}/30 ${fromCol.bgClass}`}>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Origen (Salida de Stock)</span>
+                        <div className={`font-bold text-sm sm:text-base flex items-center gap-2 ${fromCol.textClass}`}>
+                          <StoreIcon className="w-4 h-4 shrink-0" />
+                          <span>{selectedDetailTransfer.from_store_name || getStoreName(selectedDetailTransfer.from_store_id)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
 
                   {/* Flecha indicadora central w-7 h-7 */}
                   <div className="md:col-span-1 flex flex-col items-center justify-center py-1">
@@ -2244,13 +2293,18 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                   </div>
 
                   {/* Destino */}
-                  <div className="md:col-span-5 text-center sm:text-left space-y-1 p-3.5 rounded-lg bg-slate-900 border border-slate-800">
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Destino (Entrada de Stock)</span>
-                    <div className="font-bold text-sm sm:text-base text-slate-100 flex items-center gap-2">
-                      <Building2 className="w-4 h-4 text-indigo-400 shrink-0" />
-                      <span>{selectedDetailTransfer.to_store_name || getStoreName(selectedDetailTransfer.to_store_id)}</span>
-                    </div>
-                  </div>
+                  {(() => {
+                    const toCol = getColor(selectedDetailTransfer.to_store_id);
+                    return (
+                      <div className={`md:col-span-5 text-center sm:text-left space-y-1 p-3.5 rounded-lg border ${toCol.borderClass}/30 ${toCol.bgClass}`}>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block">Tienda Destino (Entrada de Stock)</span>
+                        <div className={`font-bold text-sm sm:text-base flex items-center gap-2 ${toCol.textClass}`}>
+                          <StoreIcon className="w-4 h-4 shrink-0" />
+                          <span>{selectedDetailTransfer.to_store_name || getStoreName(selectedDetailTransfer.to_store_id)}</span>
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </div>
               </div>
 

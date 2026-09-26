@@ -429,6 +429,7 @@ export const checkHealthApi = async (): Promise<boolean> => {
 export interface Store {
   id: string;
   name: string;
+  color?: string;
 }
 
 export interface MatrixProduct {
@@ -513,15 +514,15 @@ export const receiveTransferApi = async (id: number): Promise<{ success: boolean
   return response.json();
 };
 
-export const updateStoreApi = async (id: string, name: string): Promise<{ success: boolean; id: string; name: string; message: string }> => {
+export const updateStoreApi = async (id: string, name: string, color?: string): Promise<{ success: boolean; id: string; name: string; color?: string; message: string }> => {
   const response = await fetch(`${API_BASE_URL}/stores/${encodeURIComponent(id)}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ name, color }),
   });
   if (!response.ok) {
     const errData = await response.json().catch(() => ({}));
-    throw new Error(errData.error || 'Error al actualizar el nombre de la tienda');
+    throw new Error(errData.error || 'Error al actualizar la tienda');
   }
   return response.json();
 };

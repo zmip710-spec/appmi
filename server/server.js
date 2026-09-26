@@ -784,24 +784,31 @@ app.get('/api/stores', (req, res) => {
   });
 });
 
-// 1b. Actualizar nombre de una tienda
+// 1b. Actualizar nombre y color de una tienda
 app.put('/api/stores/:id', (req, res) => {
   const { id } = req.params;
-  const { name } = req.body;
+  const { name, color } = req.body;
 
   if (!name || !name.trim()) {
     return res.status(400).json({ error: 'El nombre de la tienda es requerido y no puede estar vacío.' });
   }
 
   const cleanName = name.trim();
-  db.run('UPDATE stores SET name = ? WHERE id = ?', [cleanName, id], function (err) {
+  const cleanColor = color ? color.trim() : null;
+
+  const sql = cleanColor 
+    ? 'UPDATE stores SET name = ?, color = ? WHERE id = ?' 
+    : 'UPDATE stores SET name = ? WHERE id = ?';
+  const params = cleanColor ? [cleanName, cleanColor, id] : [cleanName, id];
+
+  db.run(sql, params, function (err) {
     if (err) {
-      return res.status(500).json({ error: 'Error al actualizar el nombre de la tienda: ' + err.message });
+      return res.status(500).json({ error: 'Error al actualizar la tienda: ' + err.message });
     }
     if (this.changes === 0) {
       return res.status(404).json({ error: 'Tienda no encontrada.' });
     }
-    res.json({ success: true, id, name: cleanName, message: 'Nombre de tienda actualizado correctamente.' });
+    res.json({ success: true, id, name: cleanName, color: cleanColor, message: 'Tienda actualizada correctamente.' });
   });
 });
 

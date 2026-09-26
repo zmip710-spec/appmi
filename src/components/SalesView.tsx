@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { fetchStoresApi, fetchInventoryMatrixApi, createSaleApi, fetchSalesApi, Store as StoreType, User } from '../services/api';
 import { SaleDetailModal } from './SaleDetailModal';
+import { useStoreColors } from '../utils/storeColors';
 
 interface SalesViewProps {
   currentUser?: User | null;
@@ -35,6 +36,7 @@ interface CartItem {
 }
 
 export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
+  const { getColor } = useStoreColors();
   const [activeSubTab, setActiveSubTab] = useState<'pos' | 'history'>('pos');
   const [stores, setStores] = useState<StoreType[]>([]);
   const [selectedStoreId, setSelectedStoreId] = useState<string>('');
@@ -339,21 +341,29 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
           <div className="h-5 w-px bg-slate-800 shrink-0 mx-0.5" />
         )}
 
-        {activeSubTab === 'pos' && stores.map(st => (
-          <button
-            key={st.id}
-            type="button"
-            onClick={() => handleSelectStore(st.id)}
-            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-              selectedStoreId === st.id
-                ? 'bg-indigo-600 text-white shadow border border-indigo-500/40'
-                : 'text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800/60'
-            }`}
-          >
-            <Store className="w-3.5 h-3.5" />
-            <span>{st.name}</span>
-          </button>
-        ))}
+        {activeSubTab === 'pos' && stores.map(st => {
+          const stColor = getColor(st.id);
+          const isSelected = selectedStoreId === st.id;
+          return (
+            <button
+              key={st.id}
+              type="button"
+              onClick={() => handleSelectStore(st.id)}
+              className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                isSelected
+                  ? stColor.activeBtnClass
+                  : 'text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800/60'
+              }`}
+            >
+              <span
+                className="w-2 h-2 rounded-full shrink-0"
+                style={{ backgroundColor: stColor.hex }}
+              />
+              <Store className="w-3.5 h-3.5" />
+              <span>{st.name}</span>
+            </button>
+          );
+        })}
 
         {/* Botón Refrescar */}
         <button
@@ -567,7 +577,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
                 <ShoppingCart className="w-4.5 h-4.5 text-emerald-400" />
                 <h2 className="text-xs font-bold text-white uppercase tracking-wider">TICKET DE SALIDA</h2>
               </div>
-              <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-slate-950 text-indigo-300 border border-slate-800">
+              <span className={`text-xs font-semibold px-2.5 py-0.5 rounded-full ${getColor(selectedStoreId).badgeClass}`}>
                 {getStoreName(selectedStoreId)}
               </span>
             </div>
@@ -719,7 +729,9 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
                   </div>
                   <div>
                     <h2 className="text-xs font-bold text-white uppercase tracking-wider">TICKET DE SALIDA</h2>
-                    <span className="text-[10px] text-indigo-400 font-semibold">{getStoreName(selectedStoreId)}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block mt-0.5 ${getColor(selectedStoreId).badgeClass}`}>
+                      {getStoreName(selectedStoreId)}
+                    </span>
                   </div>
                 </div>
                 <button
@@ -849,19 +861,24 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
                 >
                   Todas
                 </button>
-                {stores.map(st => (
-                  <button
-                    key={st.id}
-                    onClick={() => setHistoryFilterStore(st.id)}
-                    className={`px-2.5 py-1 rounded-md transition cursor-pointer font-semibold ${
-                      historyFilterStore === st.id
-                        ? 'bg-indigo-600 text-white'
-                        : 'text-slate-400 hover:text-slate-200'
-                    }`}
-                  >
-                    {st.name}
-                  </button>
-                ))}
+                {stores.map(st => {
+                  const stCol = getColor(st.id);
+                  const isAct = historyFilterStore === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      onClick={() => setHistoryFilterStore(st.id)}
+                      className={`px-2.5 py-1 rounded-md transition cursor-pointer font-semibold flex items-center gap-1.5 ${
+                        isAct
+                          ? stCol.activeBtnClass
+                          : 'text-slate-400 hover:text-slate-200'
+                      }`}
+                    >
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: stCol.hex }} />
+                      <span>{st.name}</span>
+                    </button>
+                  );
+                })}
               </div>
 
               <div className="relative">
@@ -909,8 +926,8 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
                         Completado
                       </span>
                       <div className="flex items-center gap-1.5 text-xs font-semibold">
-                        <span className="bg-slate-800 text-slate-200 border border-slate-700/60 px-2.5 py-0.5 rounded-md flex items-center gap-1">
-                          <Store className="w-3.5 h-3.5 text-indigo-400" />
+                        <span className={`px-2.5 py-0.5 rounded-md flex items-center gap-1 font-bold ${getColor(sale.store_id).badgeClass}`}>
+                          <Store className="w-3.5 h-3.5" />
                           <span>{sale.store_name || sale.store_id}</span>
                         </span>
                       </div>

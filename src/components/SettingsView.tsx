@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Save, Lock, User as UserIcon, CheckCircle2, Shield, AlertCircle, Users, Eye, EyeOff, Building2, RefreshCw } from 'lucide-react';
+import { Save, Lock, User as UserIcon, CheckCircle2, Shield, AlertCircle, Users, Eye, EyeOff, Building2, RefreshCw, Store as StoreIcon, Check, Palette } from 'lucide-react';
 import { updateUserProfileApi, changePasswordApi, fetchStoresApi, updateStoreApi, User, Store } from '../services/api';
 import { UsersView } from './UsersView';
 import { UserAvatar } from './UserAvatar';
+import { STORE_PALETTE, DEFAULT_STORE_COLORS, getStoreColor, getStoreColorMap, saveStoreColorInStorage } from '../utils/storeColors';
 
 interface SettingsViewProps {
   currentUser?: User | null;
@@ -25,8 +26,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
   // Stores State
   const [storesList, setStoresList] = useState<Store[]>([]);
   const [storeNames, setStoreNames] = useState<Record<string, string>>({});
+  const [storeColorsState, setStoreColorsState] = useState<Record<string, string>>(getStoreColorMap);
   const [loadingStores, setLoadingStores] = useState(false);
   const [savingStoreId, setSavingStoreId] = useState<string | null>(null);
+  const [isSavingAll, setIsSavingAll] = useState(false);
 
   const [savedSuccess, setSavedSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState('¡Cambios guardados con éxito!');
@@ -46,10 +49,16 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
       const data = await fetchStoresApi();
       setStoresList(data);
       const nameMap: Record<string, string> = {};
+      const colorMap: Record<string, string> = { ...getStoreColorMap() };
       data.forEach(s => {
         nameMap[s.id] = s.name;
+        if (s.color) {
+          colorMap[s.id] = s.color;
+          saveStoreColorInStorage(s.id, s.color);
+        }
       });
       setStoreNames(nameMap);
+      setStoreColorsState(colorMap);
     } catch {
       // Fallback
     } finally {
@@ -69,6 +78,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
 
   const handleSaveStore = async (storeId: string) => {
     const newName = storeNames[storeId];
+    const newColor = storeColorsState[storeId] || DEFAULT_STORE_COLORS[storeId] || '#6366f1';
     if (!newName || !newName.trim()) {
       setErrorMsg('El nombre de la sucursal no puede estar vacío.');
       return;
@@ -77,14 +87,35 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
     setErrorMsg('');
     setSavingStoreId(storeId);
     try {
-      await updateStoreApi(storeId, newName.trim());
-      triggerSuccess(`Nombre de ${storeId} actualizado a "${newName.trim()}".`);
+      await updateStoreApi(storeId, newName.trim(), newColor);
+      saveStoreColorInStorage(storeId, newColor);
+      triggerSuccess(`Sucursal "${newName.trim()}" actualizada con éxito.`);
       window.dispatchEvent(new Event('stores_updated'));
       await loadStores();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error al actualizar el nombre de la tienda.');
+      setErrorMsg(err.message || 'Error al actualizar la tienda.');
     } finally {
       setSavingStoreId(null);
+    }
+  };
+
+  const handleSaveAllStores = async () => {
+    setErrorMsg('');
+    setIsSavingAll(true);
+    try {
+      for (const store of storesList) {
+        const nameToSave = storeNames[store.id] || store.name;
+        const colorToSave = storeColorsState[store.id] || store.color || DEFAULT_STORE_COLORS[store.id] || '#6366f1';
+        await updateStoreApi(store.id, nameToSave.trim(), colorToSave);
+        saveStoreColorInStorage(store.id, colorToSave);
+      }
+      triggerSuccess('¡Todas las sucursales fueron actualizadas con éxito!');
+      window.dispatchEvent(new Event('stores_updated'));
+      await loadStores();
+    } catch (err: any) {
+      setErrorMsg(err.message || 'Error al guardar las sucursales.');
+    } finally {
+      setIsSavingAll(false);
     }
   };
 
@@ -329,58 +360,166 @@ export const SettingsView: React.FC<SettingsViewProps> = ({ currentUser, onUpdat
         {/* TAB: STORES MANAGEMENT */}
         {activeTab === 'stores' && (
           <div className="space-y-6">
-            <div className="border-b border-slate-200 dark:border-slate-700/80 pb-4">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
-                <span>Gestión de Sucursales / Tiendas</span>
-              </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                Personaliza los nombres públicos de tus 3 tiendas independientes. Los cambios se actualizarán de inmediato en la matriz de existencias y traslados.
-              </p>
+            <div className="border-b border-slate-200 dark:border-slate-700/80 pb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                  <Building2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                  <span>Configuración de Sucursales & Tiendas</span>
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Personaliza los nombres públicos y el color identificador de cada tienda para distinguirlas visualmente en el inventario, matriz de existencias, traslados y punto de venta.
+                </p>
+              </div>
+
+              {storesList.length > 0 && (
+                <button
+                  type="button"
+                  onClick={handleSaveAllStores}
+                  disabled={isSavingAll}
+                  className="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition shadow-md shadow-indigo-600/20 cursor-pointer active:scale-95 shrink-0 disabled:opacity-50"
+                >
+                  {isSavingAll ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  <span>Guardar Todas las Sucursales</span>
+                </button>
+              )}
             </div>
 
             {loadingStores ? (
-              <div className="flex items-center justify-center py-12 text-slate-400 gap-2 text-sm">
+              <div className="flex items-center justify-center py-16 text-slate-400 gap-2 text-sm">
                 <RefreshCw className="w-5 h-5 animate-spin text-indigo-500" />
-                <span>Cargando sucursales...</span>
+                <span>Cargando configuración de sucursales...</span>
               </div>
             ) : (
-              <div className="space-y-4">
-                {storesList.map(store => (
-                  <div
-                    key={store.id}
-                    className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700/80 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xs"
-                  >
-                    <div className="flex items-center gap-3 w-full sm:w-auto flex-1">
-                      <span className="font-mono text-xs font-bold text-slate-500 bg-slate-200 dark:bg-slate-800 dark:text-slate-400 px-2.5 py-1.5 rounded-lg border border-slate-300 dark:border-slate-700 shrink-0">
-                        {store.id}
-                      </span>
-                      <div className="flex-1 max-w-md">
-                        <input
-                          type="text"
-                          value={storeNames[store.id] ?? store.name}
-                          onChange={e => setStoreNames({ ...storeNames, [store.id]: e.target.value })}
-                          className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500"
-                          placeholder="Nombre de la sucursal..."
-                        />
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                {storesList.map(store => {
+                  const currentColorHex = storeColorsState[store.id] || store.color || DEFAULT_STORE_COLORS[store.id] || '#6366f1';
+                  const currentTheme = getStoreColor(store.id, currentColorHex);
+                  const currentName = storeNames[store.id] ?? store.name;
+                  const isSavingThis = savingStoreId === store.id;
+
+                  return (
+                    <div
+                      key={store.id}
+                      className="bg-slate-50 dark:bg-slate-900/90 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm hover:shadow-md transition-all flex flex-col justify-between relative overflow-hidden"
+                    >
+                      {/* Top colored accent line */}
+                      <div
+                        className="absolute top-0 left-0 right-0 h-1"
+                        style={{ backgroundColor: currentTheme.hex }}
+                      />
+
+                      <div className="space-y-4">
+                        {/* 1. Header de Tarjeta */}
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={`p-2.5 rounded-xl border flex items-center justify-center ${currentTheme.badgeClass}`}
+                            >
+                              <StoreIcon className="w-5 h-5" />
+                            </div>
+                            <div>
+                              <span className="font-mono text-[10px] font-bold uppercase tracking-wider text-slate-400 block">
+                                Identificador
+                              </span>
+                              <span className="text-xs font-mono font-bold text-slate-800 dark:text-slate-200">
+                                {store.id}
+                              </span>
+                            </div>
+                          </div>
+
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                            Activa
+                          </span>
+                        </div>
+
+                        {/* 2. Campo de Nombre */}
+                        <div className="space-y-1.5">
+                          <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Nombre de la Sucursal
+                          </label>
+                          <input
+                            type="text"
+                            value={currentName}
+                            onChange={e => setStoreNames({ ...storeNames, [store.id]: e.target.value })}
+                            className="w-full bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-xl px-3.5 py-2 text-sm font-semibold text-slate-900 dark:text-white focus:outline-none focus:border-indigo-500 shadow-inner"
+                            placeholder="Ej: Sucursal Central..."
+                          />
+                        </div>
+
+                        {/* 3. Selector de Color (Color Picker interactivo) */}
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs">
+                            <span className="font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                              <Palette className="w-3.5 h-3.5 text-slate-400" />
+                              <span>Color de Identificación</span>
+                            </span>
+                            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                              {currentTheme.name}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-4 sm:grid-cols-8 gap-2 bg-white dark:bg-slate-950/60 p-2.5 rounded-xl border border-slate-200 dark:border-slate-800/80">
+                            {STORE_PALETTE.map(paletteColor => {
+                              const isSelected = currentColorHex.toLowerCase() === paletteColor.hex.toLowerCase();
+                              return (
+                                <button
+                                  key={paletteColor.id}
+                                  type="button"
+                                  onClick={() => setStoreColorsState({ ...storeColorsState, [store.id]: paletteColor.hex })}
+                                  className={`w-7 h-7 rounded-full flex items-center justify-center transition-all cursor-pointer relative group active:scale-95 ${
+                                    isSelected
+                                      ? 'ring-2 ring-offset-2 ring-offset-slate-900 ring-white scale-110 shadow-lg'
+                                      : 'hover:scale-105 opacity-80 hover:opacity-100'
+                                  }`}
+                                  style={{ backgroundColor: paletteColor.hex }}
+                                  title={paletteColor.name}
+                                >
+                                  {isSelected && <Check className="w-3.5 h-3.5 text-white drop-shadow stroke-[3]" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* 4. Vista Previa de Badge */}
+                        <div className="space-y-1.5">
+                          <span className="block text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                            Vista Previa en la Aplicación:
+                          </span>
+                          <div className="p-3 bg-white dark:bg-slate-950/80 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-2">
+                            <div className={`px-2.5 py-1 rounded-lg text-xs font-bold flex items-center gap-1.5 ${currentTheme.badgeClass}`}>
+                              <StoreIcon className="w-3.5 h-3.5" />
+                              <span>{currentName || store.id}: 25 uds</span>
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-400">En Matriz / POS</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 5. Botón de Guardar por Tarjeta */}
+                      <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80">
+                        <button
+                          type="button"
+                          onClick={() => handleSaveStore(store.id)}
+                          disabled={isSavingThis}
+                          className="w-full py-2 px-3 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold rounded-xl flex items-center justify-center space-x-1.5 transition cursor-pointer active:scale-95 disabled:opacity-50"
+                        >
+                          {isSavingThis ? (
+                            <>
+                              <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                              <span>Guardando...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-3.5 h-3.5" />
+                              <span>Guardar Sucursal</span>
+                            </>
+                          )}
+                        </button>
                       </div>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={() => handleSaveStore(store.id)}
-                      disabled={savingStoreId === store.id}
-                      className="w-full sm:w-auto px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl flex items-center justify-center space-x-2 transition shadow-md cursor-pointer disabled:opacity-50"
-                    >
-                      {savingStoreId === store.id ? (
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                      ) : (
-                        <Save className="w-4 h-4" />
-                      )}
-                      <span>Guardar</span>
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

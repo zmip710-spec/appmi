@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, ShoppingBag, Store, Calendar, Package } from 'lucide-react';
+import { getStoreColor } from '../utils/storeColors';
 
 interface SaleDetailModalProps {
   sale: any | null;
@@ -61,15 +62,20 @@ export const SaleDetailModal: React.FC<SaleDetailModalProps> = ({ sale, onClose 
         <div className="p-4 sm:p-5 space-y-4 overflow-y-auto">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Store Card */}
-            <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex items-center gap-3">
-              <div className="p-2 bg-indigo-500/10 border border-indigo-500/20 rounded-lg text-indigo-400">
-                <Store className="w-4 h-4" />
-              </div>
-              <div>
-                <span className="text-[10px] text-slate-400 uppercase block font-medium">Sucursal Origen</span>
-                <span className="text-xs font-bold text-slate-100">{sale.store_name || sale.store_id}</span>
-              </div>
-            </div>
+            {(() => {
+              const stCol = getStoreColor(sale.store_id);
+              return (
+                <div className={`p-3 rounded-xl flex items-center gap-3 border ${stCol.borderClass}/30 ${stCol.bgClass}`}>
+                  <div className={`p-2 rounded-lg border ${stCol.badgeClass}`}>
+                    <Store className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] text-slate-400 uppercase block font-medium">Sucursal Origen</span>
+                    <span className={`text-xs font-bold ${stCol.textClass}`}>{sale.store_name || sale.store_id}</span>
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Date Card */}
             <div className="p-3 bg-slate-900 border border-slate-800 rounded-xl flex items-center gap-3">
