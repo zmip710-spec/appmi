@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Search,
   ArrowRightLeft,
@@ -20,7 +20,8 @@ import {
   AlertCircle,
   Store as StoreIcon,
   PackageCheck,
-  Calendar
+  Calendar,
+  ChevronDown
 } from 'lucide-react';
 import {
   fetchStoresApi,
@@ -111,16 +112,52 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
     transits: Array<{ from_store_name?: string; to_store_name?: string; from_store_id: string; to_store_id: string; quantity: number }>;
   } | null>(null);
 
-  // State for editing commercial prices in Detail Modal
-  const [isEditingPrices, setIsEditingPrices] = useState(false);
+  // Buscador y Selector Rápido de Producto en Cabecera
+  const [detailSearchTerm, setDetailSearchTerm] = useState('');
+  const [isDetailSearchOpen, setIsDetailSearchOpen] = useState(false);
+  const detailSearchRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (detailSearchRef.current && !detailSearchRef.current.contains(e.target as Node)) {
+        setIsDetailSearchOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const filteredDetailProducts = useMemo(() => {
+    const q = detailSearchTerm.trim().toLowerCase();
+    if (!q) return matrix.slice(0, 30);
+    return matrix.filter(p =>
+      (p.sku && p.sku.toLowerCase().includes(q)) ||
+      (p.name && p.name.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q))
+    ).slice(0, 30);
+  }, [matrix, detailSearchTerm]);
+
+  // Modal de Edición Completa desde Detalle
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editName, setEditName] = useState('');
+  const [editCategory, setEditCategory] = useState('');
   const [editCostPrice, setEditCostPrice] = useState('0.0');
   const [editSalePrice, setEditSalePrice] = useState('0.0');
   const [editPricingMode, setEditPricingMode] = useState<'fixed' | 'margin'>('fixed');
   const [editMarginPercent, setEditMarginPercent] = useState('30');
   const [isSavingPrices, setIsSavingPrices] = useState(false);
 
+  // Stock Entry dentro del Modal de Edición
+  const [editStockStoreId, setEditStockStoreId] = useState<string>('tienda_1');
+  const [editStockQty, setEditStockQty] = useState<number>(1);
+  const [isSubmittingEditStock, setIsSubmittingEditStock] = useState(false);
+  const [isConfirmingDeleteInEdit, setIsConfirmingDeleteInEdit] = useState(false);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+
   useEffect(() => {
     if (selectedDetailProduct) {
+      setEditName(selectedDetailProduct.name || '');
+      setEditCategory(selectedDetailProduct.category || 'General');
       const cost = selectedDetailProduct.cost_price || 0;
       const sale = selectedDetailProduct.sale_price || 0;
       setEditCostPrice(cost.toString());
@@ -128,12 +165,21 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       const margin = cost > 0 ? (((sale - cost) / cost) * 100).toFixed(1) : '30';
       setEditMarginPercent(margin);
       setEditPricingMode('fixed');
-      setIsEditingPrices(false);
+      setShowEditModal(false);
+      setIsConfirmingDeleteInEdit(false);
+      setEditStockStoreId(stores[0]?.id || 'tienda_1');
+      setEditStockQty(1);
     }
-  }, [selectedDetailProduct]);
+  }, [selectedDetailProduct?.id]);
 
-  const handleSavePrices = async () => {
+  const handleSaveProductEdit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     if (!selectedDetailProduct) return;
+    const trimmedName = editName.trim();
+    if (!trimmedName) {
+      triggerToast('El nombre del producto no puede estar vacío.', 'error');
+      return;
+    }
     const cost = parseFloat(editCostPrice);
     if (isNaN(cost) || cost < 0) {
       triggerToast('Ingresa un precio de costo válido.', 'error');
@@ -159,17 +205,66 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
     setIsSavingPrices(true);
     try {
       await updateProductApi(selectedDetailProduct.id, {
+        name: trimmedName,
+        category: editCategory.trim() || 'General',
         cost_price: cost,
         sale_price: finalSale
       });
-      triggerToast('Precios del producto actualizados correctamente.');
-      setSelectedDetailProduct(prev => prev ? { ...prev, cost_price: cost, sale_price: finalSale } : null);
-      setIsEditingPrices(false);
+      triggerToast('Producto y precios actualizados correctamente.');
+      setSelectedDetailProduct(prev => prev ? {
+        ...prev,
+        name: trimmedName,
+        category: editCategory.trim() || 'General',
+        cost_price: cost,
+        sale_price: finalSale
+      } : null);
       await loadData(true);
+      setShowEditModal(false);
     } catch (err: any) {
-      triggerToast(err.message || 'Error al actualizar precios.', 'error');
+      triggerToast(err.message || 'Error al actualizar producto.', 'error');
     } finally {
       setIsSavingPrices(false);
+    }
+  };
+
+  const handleEditStockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedDetailProduct || editStockQty <= 0) return;
+
+    setIsSubmittingEditStock(true);
+    try {
+      await addStockEntryApi({
+        store_id: editStockStoreId,
+        product_id: selectedDetailProduct.id,
+        sku: selectedDetailProduct.sku,
+        quantity: editStockQty,
+      });
+      const storeName = getStoreName(editStockStoreId);
+      triggerToast(`Se agregaron ${editStockQty} unidades a ${storeName}.`);
+      setEditStockQty(1);
+      await refreshProductDetail(selectedDetailProduct.id, selectedDetailProduct.sku);
+      await loadData(true);
+    } catch (err: any) {
+      triggerToast(err.message || 'Error al registrar la entrada de stock.', 'error');
+    } finally {
+      setIsSubmittingEditStock(false);
+    }
+  };
+
+  const handleDeleteFromEdit = async () => {
+    if (!selectedDetailProduct) return;
+    setIsDeletingProduct(true);
+    try {
+      await deleteProductApi(selectedDetailProduct.id);
+      triggerToast(`Producto ${selectedDetailProduct.sku} eliminado del inventario.`);
+      setShowEditModal(false);
+      setIsConfirmingDeleteInEdit(false);
+      setSelectedDetailProduct(null);
+      await loadData(true);
+    } catch (err: any) {
+      triggerToast(err.message || 'Error al eliminar producto.', 'error');
+    } finally {
+      setIsDeletingProduct(false);
     }
   };
 
@@ -457,6 +552,10 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
     try {
       await deleteProductApi(deleteConfirmProduct.id);
       triggerToast('Producto eliminado del inventario.');
+      if (selectedDetailProduct?.id === deleteConfirmProduct.id) {
+        setSelectedDetailProduct(null);
+        setShowEditModal(false);
+      }
       setDeleteConfirmProduct(null);
       await loadData(true);
     } catch (err: any) {
@@ -1644,28 +1743,114 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
           className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
           style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
         >
-          {/* 1. Header fijo superior */}
-          <div className="w-full px-8 py-5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
-                <Package className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2 mb-0.5">
-                  <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-lg border border-indigo-500/20">
-                    {selectedDetailProduct.sku}
-                  </span>
-                  <span className="text-xs font-semibold text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700">
-                    {selectedDetailProduct.category || selectedDetailProduct.description || 'General'}
-                  </span>
+          {/* 1. Header fijo superior con Buscador / Selector rápido de Producto */}
+          <div className="w-full px-4 sm:px-8 py-4 sm:py-5 border-b border-slate-800 bg-slate-900/90 flex flex-col md:flex-row md:items-center justify-between gap-4 shrink-0">
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 flex-1 min-w-0">
+              <div className="flex items-center gap-3 shrink-0">
+                <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                  <Package className="w-5 h-5" />
                 </div>
-                <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight">{selectedDetailProduct.name}</h2>
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-lg border border-indigo-500/20">
+                      {selectedDetailProduct.sku}
+                    </span>
+                    <span className="text-xs font-semibold text-slate-300 bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700">
+                      {selectedDetailProduct.category || selectedDetailProduct.description || 'General'}
+                    </span>
+                  </div>
+                  <h2 className="text-xl sm:text-2xl font-extrabold text-white tracking-tight truncate max-w-xs sm:max-w-md">
+                    {selectedDetailProduct.name}
+                  </h2>
+                </div>
+              </div>
+
+              {/* Buscador / Selector rápido de Producto */}
+              <div className="relative w-full sm:w-80 md:w-96" ref={detailSearchRef}>
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Buscar o cambiar producto... (SKU / Nombre)"
+                    value={detailSearchTerm}
+                    onChange={(e) => {
+                      setDetailSearchTerm(e.target.value);
+                      setIsDetailSearchOpen(true);
+                    }}
+                    onFocus={() => setIsDetailSearchOpen(true)}
+                    className="w-full h-10 pl-9 pr-8 bg-slate-950/90 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all shadow-inner"
+                  />
+                  {detailSearchTerm ? (
+                    <button
+                      type="button"
+                      onClick={() => setDetailSearchTerm('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white p-0.5 cursor-pointer"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  ) : (
+                    <ChevronDown className="w-4 h-4 absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none" />
+                  )}
+                </div>
+
+                {/* Autocomplete / Dropdown list */}
+                {isDetailSearchOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-1.5 max-h-80 overflow-y-auto bg-slate-900 border border-slate-700/90 rounded-xl shadow-2xl z-50 divide-y divide-slate-800/80">
+                    {filteredDetailProducts.length > 0 ? (
+                      filteredDetailProducts.map(p => {
+                        const pStock = p.stock_total ?? ((p.stock_tienda_1 || 0) + (p.stock_tienda_2 || 0) + (p.stock_tienda_3 || 0) + (p.stock_transito || 0));
+                        const isCurrent = p.id === selectedDetailProduct.id;
+                        return (
+                          <button
+                            key={p.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedDetailProduct(p);
+                              setDetailSearchTerm('');
+                              setIsDetailSearchOpen(false);
+                            }}
+                            className={`w-full text-left p-3 hover:bg-slate-800/80 transition-colors flex items-center justify-between gap-3 cursor-pointer ${
+                              isCurrent ? 'bg-indigo-500/15 border-l-2 border-indigo-500' : ''
+                            }`}
+                          >
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-[11px] font-bold text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                                  {p.sku || `PROD-${p.id}`}
+                                </span>
+                                <span className="text-[11px] text-slate-400 truncate">
+                                  {p.category || 'General'}
+                                </span>
+                              </div>
+                              <div className="text-xs font-semibold text-white truncate mt-1">
+                                {p.name}
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <span className="text-xs font-mono font-bold text-emerald-400 block">
+                                {pStock} uds
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-mono">
+                                Q {(p.sale_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                              </span>
+                            </div>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="p-4 text-center text-xs text-slate-400">
+                        No se encontraron productos con "{detailSearchTerm}"
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
+
             <button
               type="button"
               onClick={() => setSelectedDetailProduct(null)}
-              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition cursor-pointer"
+              className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-semibold border border-slate-700 transition cursor-pointer shrink-0 self-start md:self-auto"
               title="Volver al Inventario (Esc)"
             >
               <X className="w-4 h-4" />
@@ -1688,9 +1873,9 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
                   return (
                     <>
-                      {/* Cabecera unificada con botones de acción */}
-                      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full border-b border-slate-800/80 pb-4">
-                        {/* Izquierda: Título EXISTENCIAS y al lado el selector/botón de PRECIOS COMERCIALES (Q) [Editar] */}
+                      {/* Cabecera unificada sin botones de agregar o eliminar */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 w-full border-b border-slate-800/80 pb-4">
+                        {/* Izquierda: Título EXISTENCIAS y al lado selector/botón de PRECIOS COMERCIALES (Q) [Editar] */}
                         <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
                           <span className="font-extrabold text-indigo-400 text-xs sm:text-sm uppercase tracking-wider flex items-center gap-2 shrink-0">
                             <Building2 className="w-4 h-4" />
@@ -1711,12 +1896,24 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                               </span>
                             </div>
 
-                            {currentUser?.role !== 'Vendedor' && !isEditingPrices && (
+                            {currentUser?.role !== 'Vendedor' && (
                               <button
                                 type="button"
-                                onClick={() => setIsEditingPrices(true)}
+                                onClick={() => {
+                                  setEditName(selectedDetailProduct.name || '');
+                                  setEditCategory(selectedDetailProduct.category || 'General');
+                                  setEditCostPrice((selectedDetailProduct.cost_price || 0).toString());
+                                  setEditSalePrice((selectedDetailProduct.sale_price || 0).toString());
+                                  const cost = selectedDetailProduct.cost_price || 0;
+                                  const sale = selectedDetailProduct.sale_price || 0;
+                                  const margin = cost > 0 ? (((sale - cost) / cost) * 100).toFixed(1) : '30';
+                                  setEditMarginPercent(margin);
+                                  setEditPricingMode('fixed');
+                                  setIsConfirmingDeleteInEdit(false);
+                                  setShowEditModal(true);
+                                }}
                                 className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-2.5 py-1 rounded-lg border border-indigo-500/20 transition cursor-pointer ml-0.5"
-                                title="Editar precios comerciales"
+                                title="Editar producto, precios comerciales, cargar stock o eliminar"
                               >
                                 <Pencil className="w-3 h-3" />
                                 <span>Editar</span>
@@ -1725,168 +1922,18 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                           </div>
                         </div>
 
-                        {/* Derecha: Botón + Agregar Unidades, botón Eliminar SKU y el badge Total: X uds */}
+                        {/* Derecha: Únicamente contadores de Total y En Camino */}
                         <div className="flex items-center gap-2.5 shrink-0 flex-wrap">
-                          <button
-                            type="button"
-                            onClick={() => {
-                              const prod = selectedDetailProduct;
-                              setSelectedDetailProduct(null);
-                              setStockEntryProduct(prod);
-                              setStockEntryStoreId(stores[0]?.id || 'tienda_1');
-                              setStockEntryQty(1);
-                            }}
-                            className="h-8 px-3.5 inline-flex items-center gap-1.5 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white transition-colors cursor-pointer shadow-sm shadow-emerald-600/20"
-                          >
-                            <Plus className="w-3.5 h-3.5" />
-                            <span>+ Agregar Unidades</span>
-                          </button>
-
-                          {currentUser?.role !== 'Vendedor' && (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const prod = selectedDetailProduct;
-                                setSelectedDetailProduct(null);
-                                setDeleteConfirmProduct(prod);
-                              }}
-                              className="h-8 px-3 inline-flex items-center gap-1.5 text-xs font-semibold rounded-lg bg-rose-500/15 text-rose-400 border border-rose-500/30 hover:bg-rose-500/25 transition-colors cursor-pointer"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                              <span>Eliminar SKU</span>
-                            </button>
-                          )}
-
                           <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 whitespace-nowrap font-mono">
                             Total: {grandTotal} uds
                           </span>
+                          {transitTotal > 0 && (
+                            <span className="bg-amber-500/10 text-amber-400 border border-amber-500/20 text-xs font-semibold px-2.5 py-1 rounded-full whitespace-nowrap font-mono">
+                              🚚 {transitTotal} en camino
+                            </span>
+                          )}
                         </div>
                       </div>
-
-                      {/* Editor de Precios Inline si isEditingPrices está activo */}
-                      {isEditingPrices && (
-                        <div className="p-4 rounded-xl bg-slate-900/90 border border-indigo-500/30 space-y-3 animate-in fade-in duration-150">
-                          <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                            <span className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-2">
-                              <DollarSign className="w-3.5 h-3.5" />
-                              Editar Precios Comerciales (Q)
-                            </span>
-                            <div className="inline-flex bg-slate-950 p-0.5 rounded border border-slate-700/60 text-[10px]">
-                              <button
-                                type="button"
-                                onClick={() => setEditPricingMode('fixed')}
-                                className={`px-2 py-0.5 rounded cursor-pointer transition ${
-                                  editPricingMode === 'fixed'
-                                    ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
-                                    : 'text-slate-400 hover:text-slate-200'
-                                }`}
-                              >
-                                Fijo (Q)
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => setEditPricingMode('margin')}
-                                className={`px-2 py-0.5 rounded cursor-pointer transition ${
-                                  editPricingMode === 'margin'
-                                    ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
-                                    : 'text-slate-400 hover:text-slate-200'
-                                }`}
-                              >
-                                Margen (%)
-                              </button>
-                            </div>
-                          </div>
-
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-start">
-                            {/* Columna Costo */}
-                            <div>
-                              <label className="block text-xs font-semibold text-slate-400 mb-1.5">PRECIO COSTO (Q)</label>
-                              <input
-                                type="number"
-                                step="0.01"
-                                min="0"
-                                value={editCostPrice}
-                                onChange={(e) => setEditCostPrice(e.target.value)}
-                                className="h-9 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-white font-mono focus:outline-none focus:border-indigo-500"
-                              />
-                            </div>
-
-                            {/* Columna Venta */}
-                            <div>
-                              <label className="block text-xs font-semibold text-emerald-400 mb-1.5">
-                                {editPricingMode === 'fixed' ? 'PRECIO VENTA (Q)' : 'MARGEN DESEADO (%)'}
-                              </label>
-                              {editPricingMode === 'fixed' ? (
-                                <>
-                                  <input
-                                    type="number"
-                                    step="0.01"
-                                    min="0"
-                                    value={editSalePrice}
-                                    onChange={(e) => setEditSalePrice(e.target.value)}
-                                    className="h-9 w-full rounded-lg bg-slate-950 border border-slate-700 px-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
-                                  />
-                                  {(() => {
-                                    const cost = parseFloat(editCostPrice) || 0;
-                                    const sale = parseFloat(editSalePrice) || 0;
-                                    const profit = sale - cost;
-                                    const pct = cost > 0 ? (profit / cost) * 100 : 0;
-                                    return (
-                                      <div className="mt-1 text-[11px] text-slate-400 font-mono truncate">
-                                        Margen: +{pct.toFixed(1)}% (Q {profit.toFixed(2)})
-                                      </div>
-                                    );
-                                  })()}
-                                </>
-                              ) : (
-                                <>
-                                  <input
-                                    type="number"
-                                    step="0.1"
-                                    min="0"
-                                    value={editMarginPercent}
-                                    onChange={(e) => setEditMarginPercent(e.target.value)}
-                                    className="h-9 w-full rounded-lg bg-slate-950 border border-emerald-500/40 px-3 text-sm text-emerald-400 font-mono focus:outline-none focus:border-emerald-500"
-                                  />
-                                  {(() => {
-                                    const cost = parseFloat(editCostPrice) || 0;
-                                    const margin = parseFloat(editMarginPercent) || 0;
-                                    const calcSale = cost * (1 + margin / 100);
-                                    return (
-                                      <div className="mt-1 text-[11px] text-emerald-400 font-mono font-bold truncate">
-                                        Venta estimada: Q {calcSale.toFixed(2)}
-                                      </div>
-                                    );
-                                  })()}
-                                </>
-                              )}
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
-                            <button
-                              type="button"
-                              onClick={() => {
-                                setIsEditingPrices(false);
-                                setEditCostPrice((selectedDetailProduct.cost_price || 0).toString());
-                                setEditSalePrice((selectedDetailProduct.sale_price || 0).toString());
-                              }}
-                              className="h-8 px-3 text-xs font-medium text-slate-400 hover:text-white transition-colors cursor-pointer"
-                            >
-                              Cancelar
-                            </button>
-                            <button
-                              type="button"
-                              onClick={handleSavePrices}
-                              disabled={isSavingPrices}
-                              className="h-8 px-3.5 text-xs font-semibold rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 inline-flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
-                            >
-                              <Check className="w-3.5 h-3.5" />
-                              <span>{isSavingPrices ? 'Guardando...' : 'Guardar Precios'}</span>
-                            </button>
-                          </div>
-                        </div>
-                      )}
 
                       {/* Fila única de 4 tarjetas de stock (Tiendas + En Tránsito) */}
                       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 w-full pt-1">
@@ -2155,6 +2202,321 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
               Cerrar
             </button>
           </div>
+
+          {/* MODAL DE EDICIÓN ESTRUCTURAL, PRECIOS, STOCK Y ELIMINAR */}
+          {showEditModal && (
+            <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-sm z-[100000] flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
+              <div className="bg-slate-900 border border-slate-700/80 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden my-auto animate-in fade-in zoom-in-95 duration-200">
+                {/* Header del Modal de Editar */}
+                <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800 bg-slate-900/90">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                      <Pencil className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-base font-bold text-white flex items-center gap-2">
+                        <span>Editar Producto</span>
+                        <span className="font-mono text-xs text-indigo-400 bg-indigo-500/10 px-2 py-0.5 rounded border border-indigo-500/20">
+                          {selectedDetailProduct.sku}
+                        </span>
+                      </h3>
+                      <p className="text-xs text-slate-400 truncate max-w-sm">{selectedDetailProduct.name}</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setIsConfirmingDeleteInEdit(false);
+                    }}
+                    className="text-slate-400 hover:text-white p-1.5 rounded-lg hover:bg-slate-800 transition cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+
+                <div className="p-5 sm:p-6 space-y-6 max-h-[calc(85vh-80px)] overflow-y-auto">
+                  {/* Bloque 1: Información General y Precios */}
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between pb-2 border-b border-slate-800">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-indigo-400 flex items-center gap-1.5">
+                        <DollarSign className="w-4 h-4" />
+                        <span>Información & Precios Comerciales (Q)</span>
+                      </h4>
+                      <div className="inline-flex bg-slate-950 p-0.5 rounded border border-slate-700/60 text-[10px]">
+                        <button
+                          type="button"
+                          onClick={() => setEditPricingMode('fixed')}
+                          className={`px-2 py-0.5 rounded cursor-pointer transition ${
+                            editPricingMode === 'fixed'
+                              ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          Fijo (Q)
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setEditPricingMode('margin')}
+                          className={`px-2 py-0.5 rounded cursor-pointer transition ${
+                            editPricingMode === 'margin'
+                              ? 'bg-emerald-500/20 text-emerald-400 font-semibold'
+                              : 'text-slate-400 hover:text-slate-200'
+                          }`}
+                        >
+                          Margen (%)
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-400 mb-1">Nombre del Producto *</label>
+                        <input
+                          type="text"
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          className="w-full h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-400 mb-1">Categoría</label>
+                        <input
+                          type="text"
+                          value={editCategory}
+                          onChange={(e) => setEditCategory(e.target.value)}
+                          className="w-full h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-400 mb-1">Precio Costo (Q)</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editCostPrice}
+                          onChange={(e) => setEditCostPrice(e.target.value)}
+                          className="w-full h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs text-white font-mono focus:border-indigo-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-emerald-400 mb-1">
+                          {editPricingMode === 'fixed' ? 'Precio Venta (Q)' : 'Margen Deseado (%)'}
+                        </label>
+                        {editPricingMode === 'fixed' ? (
+                          <>
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              value={editSalePrice}
+                              onChange={(e) => setEditSalePrice(e.target.value)}
+                              className="w-full h-9 px-3 bg-slate-950 border border-slate-700 rounded-lg text-xs text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none"
+                            />
+                            {(() => {
+                              const cost = parseFloat(editCostPrice) || 0;
+                              const sale = parseFloat(editSalePrice) || 0;
+                              const profit = sale - cost;
+                              const pct = cost > 0 ? (profit / cost) * 100 : 0;
+                              return (
+                                <div className="mt-1 text-[11px] text-slate-400 font-mono truncate">
+                                  Margen: +{pct.toFixed(1)}% (+Q {profit.toFixed(2)})
+                                </div>
+                              );
+                            })()}
+                          </>
+                        ) : (
+                          <>
+                            <input
+                              type="number"
+                              step="0.1"
+                              min="0"
+                              value={editMarginPercent}
+                              onChange={(e) => setEditMarginPercent(e.target.value)}
+                              className="w-full h-9 px-3 bg-slate-950 border border-emerald-500/40 rounded-lg text-xs text-emerald-400 font-mono focus:border-emerald-500 focus:outline-none"
+                            />
+                            {(() => {
+                              const cost = parseFloat(editCostPrice) || 0;
+                              const margin = parseFloat(editMarginPercent) || 0;
+                              const calcSale = cost * (1 + margin / 100);
+                              return (
+                                <div className="mt-1 text-[11px] text-emerald-400 font-mono font-bold truncate">
+                                  Venta estimada: Q {calcSale.toFixed(2)}
+                                </div>
+                              );
+                            })()}
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end pt-1">
+                      <button
+                        type="button"
+                        onClick={handleSaveProductEdit}
+                        disabled={isSavingPrices}
+                        className="h-8 px-4 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white inline-flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-md shadow-indigo-600/20"
+                      >
+                        <Check className="w-3.5 h-3.5" />
+                        <span>{isSavingPrices ? 'Guardando...' : 'Guardar Información y Precios'}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Bloque 2: Ajustar / Cargar Stock (Agregar Unidades) */}
+                  <div className="bg-slate-950/60 border border-slate-800 rounded-xl p-4 space-y-3">
+                    <div className="flex items-center gap-2 border-b border-slate-800/80 pb-2">
+                      <Plus className="w-4 h-4 text-emerald-400" />
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200">
+                        Ajustar / Cargar Stock (Agregar Unidades)
+                      </h4>
+                    </div>
+
+                    <form onSubmit={handleEditStockSubmit} className="space-y-3">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 items-end">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-400 mb-1">
+                            Sucursal Destino *
+                          </label>
+                          <select
+                            value={editStockStoreId}
+                            onChange={(e) => setEditStockStoreId(e.target.value)}
+                            className="w-full h-9 px-3 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white focus:border-indigo-500 focus:outline-none"
+                          >
+                            {stores.map(s => {
+                              const curStock = getProductStockInStore(s.id);
+                              return (
+                                <option key={s.id} value={s.id}>
+                                  {s.name} (Actual: {curStock} uds)
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-400 mb-1">
+                            Cantidad a Ingresar *
+                          </label>
+                          <div className="flex items-center gap-1.5">
+                            <input
+                              type="number"
+                              min="1"
+                              required
+                              value={editStockQty}
+                              onChange={(e) => setEditStockQty(Math.max(1, parseInt(e.target.value, 10) || 1))}
+                              className="w-full h-9 px-3 bg-slate-900 border border-slate-700 rounded-lg text-xs text-white font-mono focus:border-indigo-500 focus:outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setEditStockQty(q => q + 1)}
+                              className="h-9 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-mono shrink-0 cursor-pointer"
+                            >
+                              +1
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditStockQty(q => q + 5)}
+                              className="h-9 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-mono shrink-0 cursor-pointer"
+                            >
+                              +5
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditStockQty(q => q + 10)}
+                              className="h-9 px-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-mono shrink-0 cursor-pointer"
+                            >
+                              +10
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end pt-1">
+                        <button
+                          type="submit"
+                          disabled={isSubmittingEditStock}
+                          className="h-8 px-4 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white inline-flex items-center gap-1.5 transition cursor-pointer disabled:opacity-50 shadow-md shadow-emerald-600/20"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          <span>{isSubmittingEditStock ? 'Agregando...' : 'Agregar Unidades'}</span>
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Bloque 3: Zona de Peligro / Acción Destructiva */}
+                  {currentUser?.role !== 'Vendedor' && (
+                    <div className="bg-rose-950/20 border border-rose-500/30 rounded-xl p-4 space-y-3">
+                      <div className="flex items-center gap-2">
+                        <Trash2 className="w-4 h-4 text-rose-400" />
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-rose-300">
+                          Zona de Peligro: Eliminar Producto / SKU
+                        </h4>
+                      </div>
+                      <p className="text-xs text-rose-200/80">
+                        Esta acción es irreversible y eliminará este SKU junto con todas sus existencias registradas en las sucursales.
+                      </p>
+
+                      {!isConfirmingDeleteInEdit ? (
+                        <div className="flex justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setIsConfirmingDeleteInEdit(true)}
+                            className="h-8 px-3.5 text-xs font-semibold rounded-lg bg-rose-500/15 text-rose-300 border border-rose-500/40 hover:bg-rose-500/25 inline-flex items-center gap-1.5 transition cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Eliminar Producto / SKU</span>
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-rose-950/60 border border-rose-500/50 rounded-lg space-y-2 animate-in fade-in duration-150">
+                          <p className="text-xs font-bold text-rose-300">
+                            ¿Confirmas que deseas eliminar definitivamente este SKU?
+                          </p>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setIsConfirmingDeleteInEdit(false)}
+                              className="h-7 px-3 text-xs text-slate-300 hover:text-white bg-slate-800 rounded-lg transition cursor-pointer"
+                            >
+                              Cancelar
+                            </button>
+                            <button
+                              type="button"
+                              onClick={handleDeleteFromEdit}
+                              disabled={isDeletingProduct}
+                              className="h-7 px-3.5 text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white rounded-lg transition cursor-pointer disabled:opacity-50 shadow-md shadow-rose-600/30"
+                            >
+                              {isDeletingProduct ? 'Eliminando...' : 'Sí, Eliminar SKU'}
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Modal Footer */}
+                <div className="px-6 py-3 border-t border-slate-800 bg-slate-900/90 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowEditModal(false);
+                      setIsConfirmingDeleteInEdit(false);
+                    }}
+                    className="h-9 px-5 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs rounded-xl transition cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
