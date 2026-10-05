@@ -16,7 +16,9 @@ import {
   Eye,
   Calendar,
   Filter,
-  X
+  X,
+  ChevronDown,
+  Check
 } from 'lucide-react';
 import { fetchStoresApi, fetchInventoryMatrixApi, createSaleApi, fetchSalesApi, Store as StoreType, User } from '../services/api';
 import { SaleDetailModal } from './SaleDetailModal';
@@ -47,6 +49,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [cart, setCart] = useState<CartItem[]>([]);
   const [isMobileCartOpen, setIsMobileCartOpen] = useState<boolean>(false);
+  const [isStoreDrawerOpen, setIsStoreDrawerOpen] = useState<boolean>(false);
   const [submitting, setSubmitting] = useState<boolean>(false);
   const [toast, setToast] = useState<{ show: boolean; message: string; type: 'success' | 'error' }>({
     show: false,
@@ -301,83 +304,154 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
         </div>
       )}
 
-      {/* 1. BARRA DE FILTROS Y SUCURSALES (Punto de Venta, Historial, Tienda 1, Tienda 2) */}
-      <div className="w-full flex items-center gap-2 overflow-x-auto whitespace-nowrap py-1 scrollbar-none bg-slate-900/70 border border-slate-800 rounded-xl px-2.5 sm:px-4 py-2 backdrop-blur-sm shadow-md">
-        {/* Pestañas: Punto de Venta & Historial */}
-        <button
-          type="button"
-          onClick={() => setActiveSubTab('pos')}
-          className={`shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeSubTab === 'pos'
-              ? 'bg-indigo-600 text-white shadow-md'
-              : 'text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800/60'
-          }`}
-        >
-          <ShoppingCart className="w-3.5 h-3.5" />
-          <span>Punto de Venta</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={() => {
-            setActiveSubTab('history');
-            loadSalesHistory();
-          }}
-          className={`shrink-0 px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
-            activeSubTab === 'history'
-              ? 'bg-indigo-600 text-white shadow-md'
-              : 'text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800/60'
-          }`}
-        >
-          <Receipt className="w-3.5 h-3.5" />
-          <span>Historial</span>
-          <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
-            {salesHistory.length}
-          </span>
-        </button>
-
-        {/* Separador y Tiendas */}
-        {activeSubTab === 'pos' && stores.length > 0 && (
-          <div className="h-5 w-px bg-slate-800 shrink-0 mx-0.5" />
-        )}
-
-        {activeSubTab === 'pos' && stores.map(st => {
-          const stColor = getColor(st.id);
-          const isSelected = selectedStoreId === st.id;
-          return (
+      {/* 1. BARRA DE FILTROS Y SUCURSALES (Punto de Venta, Historial, Tiendas con colapso móvil) */}
+      <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-slate-900/70 border border-slate-800 rounded-xl px-2.5 sm:px-4 py-2 backdrop-blur-sm shadow-md">
+        {/* Fila superior / izquierda: Pestañas de Punto de Venta & Historial */}
+        <div className="flex items-center justify-between gap-2 w-full md:w-auto">
+          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none py-0.5">
             <button
-              key={st.id}
               type="button"
-              onClick={() => handleSelectStore(st.id)}
-              className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
-                isSelected
-                  ? stColor.activeBtnClass
+              onClick={() => setActiveSubTab('pos')}
+              className={`shrink-0 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                activeSubTab === 'pos'
+                  ? 'bg-indigo-600 text-white shadow-md'
                   : 'text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800/60'
               }`}
             >
-              <span
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ backgroundColor: stColor.hex }}
-              />
-              <Store className="w-3.5 h-3.5" />
-              <span>{st.name}</span>
+              <ShoppingCart className="w-3.5 h-3.5" />
+              <span>Punto de Venta</span>
             </button>
-          );
-        })}
 
-        {/* Botón Refrescar */}
-        <button
-          type="button"
-          onClick={() => {
-            loadData(true);
-            if (activeSubTab === 'history') loadSalesHistory();
-          }}
-          disabled={refreshing}
-          className="shrink-0 ml-auto h-8 w-8 inline-flex items-center justify-center rounded-lg bg-slate-800/80 border border-slate-700 text-slate-400 hover:text-white transition cursor-pointer disabled:opacity-50"
-          title="Refrescar existencias"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-indigo-400' : ''}`} />
-        </button>
+            <button
+              type="button"
+              onClick={() => {
+                setActiveSubTab('history');
+                loadSalesHistory();
+              }}
+              className={`shrink-0 px-3 sm:px-3.5 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-2 cursor-pointer ${
+                activeSubTab === 'history'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800/60'
+              }`}
+            >
+              <Receipt className="w-3.5 h-3.5" />
+              <span>Historial</span>
+              <span className="text-[10px] font-semibold px-1.5 py-0.2 rounded-full bg-slate-800 text-slate-300 border border-slate-700/60">
+                {salesHistory.length}
+              </span>
+            </button>
+          </div>
+
+          {/* Botón Refrescar en móvil */}
+          <button
+            type="button"
+            onClick={() => {
+              loadData(true);
+              if (activeSubTab === 'history') loadSalesHistory();
+            }}
+            disabled={refreshing}
+            className="md:hidden shrink-0 h-8 w-8 inline-flex items-center justify-center rounded-lg bg-slate-800/80 border border-slate-700 text-slate-400 hover:text-white transition cursor-pointer disabled:opacity-50"
+            title="Refrescar existencias"
+          >
+            <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-indigo-400' : ''}`} />
+          </button>
+        </div>
+
+        {/* En Desktop (md+): Tiendas mostradas en fila horizontal con sus colores */}
+        {activeSubTab === 'pos' && stores.length > 0 && (
+          <div className="hidden md:flex items-center gap-2 overflow-x-auto whitespace-nowrap scrollbar-none">
+            <div className="h-5 w-px bg-slate-800 shrink-0 mx-0.5" />
+            {stores.map(st => {
+              const stColor = getColor(st.id);
+              const isSelected = selectedStoreId === st.id;
+              return (
+                <button
+                  key={st.id}
+                  type="button"
+                  onClick={() => handleSelectStore(st.id)}
+                  className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold transition cursor-pointer flex items-center gap-1.5 ${
+                    isSelected
+                      ? stColor.activeBtnClass
+                      : 'text-slate-400 hover:text-slate-200 bg-slate-950/60 border border-slate-800/60'
+                  }`}
+                >
+                  <span
+                    className="w-2 h-2 rounded-full shrink-0"
+                    style={{ backgroundColor: stColor.hex }}
+                  />
+                  <Store className="w-3.5 h-3.5" />
+                  <span>{st.name}</span>
+                </button>
+              );
+            })}
+
+            {/* Botón Refrescar en desktop */}
+            <button
+              type="button"
+              onClick={() => {
+                loadData(true);
+                if (activeSubTab === 'history') loadSalesHistory();
+              }}
+              disabled={refreshing}
+              className="shrink-0 h-8 w-8 ml-1 inline-flex items-center justify-center rounded-lg bg-slate-800/80 border border-slate-700 text-slate-400 hover:text-white transition cursor-pointer disabled:opacity-50"
+              title="Refrescar existencias"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-indigo-400' : ''}`} />
+            </button>
+          </div>
+        )}
+
+        {/* En Móvil (< md): Selector de Sucursales tipo Acordeón / Dropdown Colapsable */}
+        {activeSubTab === 'pos' && stores.length > 0 && (
+          <div className="md:hidden relative w-full pt-1 border-t border-slate-800/60">
+            <button
+              type="button"
+              onClick={() => setIsStoreDrawerOpen(prev => !prev)}
+              className={`w-full px-3 py-2 rounded-xl text-xs font-bold transition flex items-center justify-between border cursor-pointer ${getColor(selectedStoreId).badgeClass}`}
+            >
+              <div className="flex items-center gap-2 truncate">
+                <span
+                  className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                  style={{ backgroundColor: getColor(selectedStoreId).hex }}
+                />
+                <Store className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Sucursal: {getStoreName(selectedStoreId)}</span>
+              </div>
+              <ChevronDown className={`w-4 h-4 shrink-0 transition-transform duration-200 ${isStoreDrawerOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {isStoreDrawerOpen && (
+              <div className="mt-1.5 p-1.5 bg-slate-950 border border-slate-800 rounded-xl space-y-1 shadow-2xl z-20 animate-in fade-in slide-in-from-top-1">
+                <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                  Cambiar Sucursal Activa
+                </div>
+                {stores.map(st => {
+                  const stColor = getColor(st.id);
+                  const isSelected = selectedStoreId === st.id;
+                  return (
+                    <button
+                      key={st.id}
+                      type="button"
+                      onClick={() => {
+                        handleSelectStore(st.id);
+                        setIsStoreDrawerOpen(false);
+                      }}
+                      className={`w-full px-3 py-2 rounded-lg text-xs font-semibold flex items-center justify-between transition cursor-pointer ${
+                        isSelected ? stColor.activeBtnClass : 'text-slate-300 hover:bg-slate-900 border border-slate-800/60'
+                      }`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: stColor.hex }} />
+                        <span>{st.name}</span>
+                      </div>
+                      {isSelected && <Check className="w-3.5 h-3.5" />}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* 2. LAYOUT PRINCIPAL DE 2 COLUMNAS (h-auto en móvil, h-[calc(100vh-140px)] en desktop) */}
@@ -720,7 +794,7 @@ export const SalesView: React.FC<SalesViewProps> = ({ currentUser }) => {
 
           {/* MODAL / PANTALLA COMPLETA DEL TICKET EN MÓVIL (< lg) */}
           {isMobileCartOpen && (
-            <div className="lg:hidden fixed inset-0 top-0 left-0 right-0 bottom-0 z-[100] w-screen h-screen bg-slate-950 flex flex-col m-0 p-0">
+            <div className="lg:hidden fixed inset-0 top-0 left-0 right-0 bottom-0 z-[100] w-full h-full max-w-full max-h-full bg-slate-950 flex flex-col m-0 p-0 overflow-hidden">
               {/* Header Fijo */}
               <div className="w-full px-4 py-3.5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
                 <div className="flex items-center gap-2.5">

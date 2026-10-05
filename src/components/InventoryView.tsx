@@ -872,7 +872,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
       {/* Detalle de Existencias Multitienda Modal */}
       {selectedDetailProduct && (
         <div 
-          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-full h-full max-w-full max-h-full bg-slate-950 flex flex-col m-0 p-0 overflow-hidden"
           style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
         >
           {/* 1. Header fijo superior */}
@@ -1081,7 +1081,7 @@ export const InventoryView: React.FC<InventoryViewProps> = ({ currentUser, readO
       {/* Modal Add New Product / SKU directly */}
       {showAddModal && (
         <div 
-          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-full h-full max-w-full max-h-full bg-slate-950 flex flex-col m-0 p-0 overflow-hidden"
           style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
         >
           {/* 1. Header (arriba, altura fija) */}

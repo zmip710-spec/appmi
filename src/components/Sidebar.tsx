@@ -226,27 +226,45 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </div>
       </div>
 
-      {/* MOBILE BOTTOM NAVIGATION BAR (Fixed at bottom with smooth horizontal scroll) */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 flex items-center overflow-x-auto whitespace-nowrap px-2 py-2 gap-1.5 shadow-2xl scrollbar-none">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id)}
-              className={`flex flex-col items-center justify-center min-w-[60px] flex-1 py-1 px-1.5 rounded-xl transition ${
-                isActive ? 'text-indigo-600 dark:text-indigo-400 font-bold' : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
-              }`}
-            >
-              <div className={`p-1.5 rounded-xl transition ${isActive ? 'bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/40 shadow-sm' : ''}`}>
-                <Icon className="w-5 h-5" />
-              </div>
-              <span className="text-[11px] mt-0.5 font-medium truncate max-w-[68px]">{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
+      {/* MOBILE BOTTOM NAVIGATION BAR (Fixed at bottom, perfectly aligned and touch-accessible) */}
+      <nav
+        aria-label="Navegación Móvil"
+        className="md:hidden fixed bottom-0 inset-x-0 z-50 w-full bg-white/95 dark:bg-slate-900/95 backdrop-blur-xl border-t border-slate-200 dark:border-slate-800 shadow-[0_-4px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.4)] pb-[max(0.5rem,env(safe-area-inset-bottom))]"
+      >
+        <div
+          className="grid max-w-md mx-auto w-full px-2 py-1.5 gap-1 items-center"
+          style={{ gridTemplateColumns: `repeat(${navItems.length}, minmax(0, 1fr))` }}
+        >
+          {navItems.map((item) => {
+            const Icon = item.icon;
+            const isActive = activeTab === item.id;
+            return (
+              <button
+                key={item.id}
+                onClick={() => setActiveTab(item.id)}
+                className={`flex flex-col items-center justify-center py-1.5 px-1 rounded-xl transition-all duration-150 cursor-pointer active:scale-95 ${
+                  isActive
+                    ? 'text-indigo-600 dark:text-indigo-400 font-bold'
+                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
+                }`}
+              >
+                <div
+                  className={`p-1.5 rounded-xl transition-all ${
+                    isActive
+                      ? 'bg-indigo-50 dark:bg-indigo-600/20 border border-indigo-200 dark:border-indigo-500/40 shadow-sm scale-105'
+                      : 'hover:bg-slate-100 dark:hover:bg-slate-800'
+                  }`}
+                >
+                  <Icon className="w-5 h-5 shrink-0" />
+                </div>
+                <span className="text-[11px] mt-0.5 tracking-tight font-medium truncate w-full text-center">
+                  {item.label}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
     </>
   );
 };

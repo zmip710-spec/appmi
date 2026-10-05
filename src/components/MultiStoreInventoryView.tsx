@@ -22,7 +22,11 @@ import {
   PackageCheck,
   Calendar,
   ChevronDown,
-  Wand2
+  ChevronUp,
+  Filter,
+  Wand2,
+  LayoutGrid,
+  List
 } from 'lucide-react';
 import {
   fetchStoresApi,
@@ -53,6 +57,9 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
   const [matrix, setMatrix] = useState<MatrixProduct[]>([]);
   const [transfers, setTransfers] = useState<InventoryTransfer[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStoreFilter, setSelectedStoreFilter] = useState<string>('all');
+  const [isStoreFilterDrawerOpen, setIsStoreFilterDrawerOpen] = useState(false);
+  const [mobileViewMode, setMobileViewMode] = useState<'cards' | 'table'>('cards');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -453,16 +460,25 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
     }
   };
 
-  // Filter matrix by search term
+  // Filter matrix by search term and selected store filter
   const filteredMatrix = useMemo(() => {
-    if (!searchTerm.trim()) return matrix;
+    let list = matrix;
+    if (selectedStoreFilter && selectedStoreFilter !== 'all') {
+      list = list.filter(p => {
+        if (selectedStoreFilter === 'tienda_1') return (p.stock_tienda_1 || 0) > 0;
+        if (selectedStoreFilter === 'tienda_2') return (p.stock_tienda_2 || 0) > 0;
+        if (selectedStoreFilter === 'tienda_3') return (p.stock_tienda_3 || 0) > 0;
+        return true;
+      });
+    }
+    if (!searchTerm.trim()) return list;
     const term = searchTerm.toLowerCase().trim();
-    return matrix.filter(p =>
+    return list.filter(p =>
       p.name.toLowerCase().includes(term) ||
       (p.sku && p.sku.toLowerCase().includes(term)) ||
       (p.description && p.description.toLowerCase().includes(term))
     );
-  }, [matrix, searchTerm]);
+  }, [matrix, searchTerm, selectedStoreFilter]);
 
   // Total Initial Stock Indicator in Create Modal
   const totalInitialStockInModal = useMemo(() => {
@@ -646,7 +662,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
         </div>
       )}
 
-      {/* BARRA HORIZONTAL COMPACTA: HEADER, METRICAS Y ACCIONES */}
+      {/* HEADER, ACCIONES Y MÉTRICAS RESPONSIVAS */}
       {(() => {
         const totalSKUs = matrix.length;
         const s1Total = matrix.reduce((acc, curr) => acc + (curr.stock_tienda_1 || 0), 0);
@@ -665,132 +681,346 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
         }, 0);
 
         return (
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-xl px-3 sm:px-4 py-2.5 flex flex-wrap lg:flex-nowrap items-center justify-between gap-3 sm:gap-4 mb-4 backdrop-blur-sm shadow-md">
-            {/* 1. Sección Izquierda (Título y Estado) */}
-            <div className="flex items-center gap-2.5 shrink-0 min-w-0">
-              <h1 className="text-base sm:text-xl font-bold text-white truncate">Control de Inventario</h1>
-              <span className="text-[11px] text-slate-400 bg-slate-800/70 border border-slate-700/50 px-2 py-0.5 rounded-full whitespace-nowrap shrink-0">
-                3 sucursales
-              </span>
+          <div className="space-y-3 sm:space-y-4 mb-4">
+            {/* Fila 1: Título, Estado y Botones de Acción */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-900/60 border border-slate-800/80 rounded-2xl p-3 sm:p-4 backdrop-blur-sm shadow-md">
+              <div className="flex items-center justify-between gap-2.5 min-w-0">
+                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                    <Boxes className="w-5 h-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <h1 className="text-base sm:text-xl font-bold text-white truncate">Control de Inventario</h1>
+                    <span className="text-[11px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 inline-block animate-pulse"></span>
+                      3 sucursales sincronizadas
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => loadData(true)}
+                  disabled={refreshing}
+                  className="sm:hidden h-10 w-10 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl inline-flex items-center justify-center cursor-pointer transition-colors disabled:opacity-50 shrink-0"
+                  title="Refrescar datos"
+                >
+                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-indigo-400' : ''}`} />
+                </button>
+              </div>
+
+              {/* Botones de acción principales (Reorganizados a 2 columnas / ancho completo en móvil) */}
+              <div className="grid grid-cols-2 sm:flex sm:items-center gap-2 sm:gap-2.5 w-full sm:w-auto">
+                <button
+                  onClick={() => setShowAddProductModal(true)}
+                  className="h-11 sm:h-9 px-3.5 sm:px-4 text-xs sm:text-sm bg-indigo-600 hover:bg-indigo-500 active:scale-[0.98] text-white font-semibold rounded-xl inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-lg shadow-indigo-600/20 transition-all"
+                >
+                  <Plus className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Nuevo Producto</span>
+                </button>
+
+                <button
+                  onClick={handleOpenTransferModal}
+                  className="h-11 sm:h-9 px-3.5 sm:px-4 text-xs sm:text-sm bg-slate-800 border border-slate-700 hover:bg-slate-700 active:scale-[0.98] text-slate-100 font-semibold rounded-xl inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all"
+                >
+                  <ArrowRightLeft className="w-4 h-4 shrink-0" />
+                  <span className="truncate">Traslado</span>
+                </button>
+
+                <button
+                  onClick={() => loadData(true)}
+                  disabled={refreshing}
+                  className="hidden sm:inline-flex h-9 w-9 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl items-center justify-center cursor-pointer transition-colors disabled:opacity-50 shrink-0"
+                  title="Refrescar datos"
+                >
+                  <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin text-indigo-400' : ''}`} />
+                </button>
+              </div>
             </div>
 
-            {/* 2. Sección Central (Métricas inline / pastillas compactas) */}
-            <div className="flex items-center flex-wrap gap-3 text-xs font-mono">
-              <div className="flex items-center gap-1">
-                <span className="text-slate-400 font-sans">SKUs:</span>
-                <strong className="text-white font-semibold">{totalSKUs}</strong>
+            {/* Fila 2: Tarjetas de estadísticas apiladas en cuadrícula de 2 columnas en móvil y 4 en desktop */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 w-full">
+              {/* Tarjeta 1: SKUs */}
+              <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                <div className="min-w-0">
+                  <span className="text-[11px] text-slate-400 font-semibold block uppercase tracking-wider truncate">SKUs</span>
+                  <span className="text-lg sm:text-xl font-bold font-mono text-white block mt-0.5">{totalSKUs}</span>
+                  <span className="text-[10px] text-slate-500 font-sans block truncate mt-0.5">Catálogo activo</span>
+                </div>
+                <div className="p-2 sm:p-2.5 rounded-lg bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
+                  <Boxes className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
               </div>
 
-              <span className="text-slate-700">|</span>
-
-              <div className="flex items-center gap-1">
-                <span className="text-slate-400 font-sans">Stock:</span>
-                <strong className="text-emerald-400 font-semibold">{totalPhysical} uds</strong>
-                <span className="text-[10px] text-slate-500 font-mono">(T1:{s1Total} T2:{s2Total} T3:{s3Total})</span>
+              {/* Tarjeta 2: Stock Total */}
+              <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                <div className="min-w-0">
+                  <span className="text-[11px] text-slate-400 font-semibold block uppercase tracking-wider truncate">Stock Total</span>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-lg sm:text-xl font-bold font-mono text-emerald-400">{totalPhysical}</span>
+                    <span className="text-[11px] text-slate-400 font-medium">uds</span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 font-mono block truncate mt-0.5">
+                    T1:{s1Total} T2:{s2Total} T3:{s3Total}
+                  </span>
+                </div>
+                <div className="p-2 sm:p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                  <StoreIcon className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
               </div>
 
-              <span className="text-slate-700">|</span>
-
-              {totalInTransit > 0 ? (
-                <span className="inline-flex items-center gap-1 bg-amber-500/10 text-amber-300 border border-amber-500/20 text-[11px] font-semibold px-2 py-0.5 rounded-full whitespace-nowrap">
-                  🚚 {totalInTransit} en camino
-                </span>
-              ) : (
-                <span className="text-slate-500 font-sans">Tránsito: 0</span>
-              )}
-
-              <span className="text-slate-700">|</span>
-
-              <div className="flex items-center gap-1">
-                <span className="text-slate-400 font-sans">Total:</span>
-                <strong className="text-emerald-400 font-mono font-semibold">
-                  Q {totalValuationCost.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                </strong>
+              {/* Tarjeta 3: En Tránsito */}
+              <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                <div className="min-w-0">
+                  <span className="text-[11px] text-slate-400 font-semibold block uppercase tracking-wider truncate">Tránsito</span>
+                  <div className="flex items-baseline gap-1 mt-0.5">
+                    <span className="text-lg sm:text-xl font-bold font-mono text-amber-300">{totalInTransit}</span>
+                    <span className="text-[11px] text-slate-400 font-medium">uds</span>
+                  </div>
+                  <span className="text-[10px] text-amber-400/80 font-sans block truncate mt-0.5">
+                    {totalInTransit > 0 ? '🚚 En camino' : 'Sin traslados'}
+                  </span>
+                </div>
+                <div className="p-2 sm:p-2.5 rounded-lg bg-amber-500/10 text-amber-400 border border-amber-500/20 shrink-0">
+                  <ArrowRightLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
               </div>
-            </div>
 
-            {/* 3. Sección Derecha (Acciones compactas) */}
-            <div className="flex items-center gap-2 shrink-0">
-              <button
-                onClick={() => setShowAddProductModal(true)}
-                className="h-8 px-3 text-xs bg-indigo-600 hover:bg-indigo-500 text-white font-medium rounded-lg inline-flex items-center gap-1.5 cursor-pointer shadow transition-colors"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                <span>Nuevo Producto</span>
-              </button>
-
-              <button
-                onClick={handleOpenTransferModal}
-                className="h-8 px-3 text-xs bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-200 font-medium rounded-lg inline-flex items-center gap-1.5 cursor-pointer transition-colors"
-              >
-                <ArrowRightLeft className="w-3.5 h-3.5" />
-                <span>Traslado</span>
-              </button>
-
-              <button
-                onClick={() => loadData(true)}
-                disabled={refreshing}
-                className="h-8 w-8 bg-slate-800 border border-slate-700 hover:bg-slate-700 text-slate-400 hover:text-white rounded-lg inline-flex items-center justify-center cursor-pointer transition-colors disabled:opacity-50"
-                title="Refrescar datos"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin text-indigo-400' : ''}`} />
-              </button>
+              {/* Tarjeta 4: Valor Total en Quetzales */}
+              <div className="bg-slate-900/70 border border-slate-800/80 rounded-xl p-3 flex items-center justify-between shadow-sm">
+                <div className="min-w-0">
+                  <span className="text-[11px] text-slate-400 font-semibold block uppercase tracking-wider truncate">Total (Q)</span>
+                  <span className="text-base sm:text-lg lg:text-xl font-bold font-mono text-emerald-400 block mt-0.5 truncate">
+                    Q {totalValuationCost.toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  </span>
+                  <span className="text-[10px] text-slate-500 font-sans block truncate mt-0.5">Costo inventario</span>
+                </div>
+                <div className="p-2 sm:p-2.5 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 shrink-0">
+                  <DollarSign className="w-4 h-4 sm:w-5 sm:h-5" />
+                </div>
+              </div>
             </div>
           </div>
         );
       })()}
 
-      {/* Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 border-b border-slate-800 pb-3 sm:pb-4">
-        <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap py-1 scrollbar-none bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 w-full sm:w-auto">
-          <button
-            onClick={() => setActiveTab('matrix')}
-            className={`shrink-0 flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
-              activeTab === 'matrix'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <Boxes className="w-4 h-4" />
-            <span>Matriz de Existencias</span>
-          </button>
+      {/* Tabs, Filtro de Sucursal & Barra de Búsqueda */}
+      <div className="space-y-3 border-b border-slate-800 pb-3 sm:pb-4">
+        {/* Barra superior: Tabs + Selector de vista móvil */}
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <div className="flex items-center gap-2 overflow-x-auto whitespace-nowrap py-1 scrollbar-none bg-slate-900/80 p-1.5 rounded-xl border border-slate-800 w-full sm:w-auto">
+            <button
+              onClick={() => setActiveTab('matrix')}
+              className={`shrink-0 flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer ${
+                activeTab === 'matrix'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <Boxes className="w-4 h-4" />
+              <span>Matriz de Existencias</span>
+            </button>
 
-          <button
-            onClick={() => setActiveTab('transfers')}
-            className={`shrink-0 flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer relative ${
-              activeTab === 'transfers'
-                ? 'bg-indigo-600 text-white shadow-md'
-                : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
-            }`}
-          >
-            <ArrowRightLeft className="w-4 h-4" />
-            <span>Historial y Tránsito</span>
-            {transfers.filter(t => t.status === 'en_transito').length > 0 && (
-              <span className="ml-1.5 px-2 py-0.5 text-[10px] font-bold bg-amber-500 text-slate-950 rounded-full animate-pulse">
-                {transfers.filter(t => t.status === 'en_transito').length}
-              </span>
-            )}
-          </button>
+            <button
+              onClick={() => setActiveTab('transfers')}
+              className={`shrink-0 flex items-center gap-2 px-3.5 sm:px-4 py-2 rounded-lg text-xs sm:text-sm font-medium transition-all cursor-pointer relative ${
+                activeTab === 'transfers'
+                  ? 'bg-indigo-600 text-white shadow-md'
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+              }`}
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+              <span>Historial y Tránsito</span>
+              {transfers.filter(t => t.status === 'en_transito').length > 0 && (
+                <span className="ml-1.5 px-2 py-0.5 text-[10px] font-bold bg-amber-500 text-slate-950 rounded-full animate-pulse">
+                  {transfers.filter(t => t.status === 'en_transito').length}
+                </span>
+              )}
+            </button>
+          </div>
+
+          {/* Selector de modo de vista móvil (Tarjetas vs Tabla) */}
+          {activeTab === 'matrix' && (
+            <div className="flex md:hidden items-center gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl">
+              <button
+                onClick={() => setMobileViewMode('cards')}
+                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
+                  mobileViewMode === 'cards'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Vista en Tarjetas"
+              >
+                <LayoutGrid className="w-4 h-4" />
+                <span className="text-[11px]">Tarjetas</span>
+              </button>
+              <button
+                onClick={() => setMobileViewMode('table')}
+                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
+                  mobileViewMode === 'table'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white'
+                }`}
+                title="Vista en Tabla"
+              >
+                <List className="w-4 h-4" />
+                <span className="text-[11px]">Tabla</span>
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Search Input */}
-        <div className="relative w-full sm:w-72">
-          <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input
-            type="text"
-            placeholder="Buscar por SKU o Nombre..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
-          />
-          {searchTerm && (
-            <button
-              onClick={() => setSearchTerm('')}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-            >
-              Limpiar
-            </button>
-          )}
+        {/* Fila 2: Filtros de Sucursal y Buscador */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+          {/* Selector de Sucursales: En Móvil Acordeón/Dropdown colapsable, en Desktop Filtros inline */}
+          <div className="w-full md:w-auto">
+            {/* Versión móvil (< md): Acordeón / Dropdown */}
+            <div className="md:hidden">
+              <button
+                type="button"
+                onClick={() => setIsStoreFilterDrawerOpen(!isStoreFilterDrawerOpen)}
+                className="w-full flex items-center justify-between gap-2 px-3 py-2 bg-slate-900 border border-slate-800 rounded-xl text-xs font-medium text-slate-200 hover:border-slate-700 transition-colors"
+              >
+                <div className="flex items-center gap-2 truncate">
+                  <Filter className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+                  <span className="text-slate-400">Sucursal:</span>
+                  <span className="font-semibold text-white truncate">
+                    {selectedStoreFilter === 'all'
+                      ? 'Todas las sucursales'
+                      : getStoreName(selectedStoreFilter)}
+                  </span>
+                  {selectedStoreFilter !== 'all' && (
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ backgroundColor: getColor(selectedStoreFilter).hex }}
+                    />
+                  )}
+                </div>
+                {isStoreFilterDrawerOpen ? (
+                  <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" />
+                ) : (
+                  <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                )}
+              </button>
+
+              {/* Acordeón desplegado en móvil */}
+              {isStoreFilterDrawerOpen && (
+                <div className="mt-1.5 p-2 bg-slate-900/95 border border-slate-800 rounded-xl space-y-1 shadow-xl animate-in fade-in duration-200">
+                  <button
+                    onClick={() => {
+                      setSelectedStoreFilter('all');
+                      setIsStoreFilterDrawerOpen(false);
+                    }}
+                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                      selectedStoreFilter === 'all'
+                        ? 'bg-indigo-600 text-white'
+                        : 'text-slate-300 hover:bg-slate-800/80'
+                    }`}
+                  >
+                    <span>Todas las sucursales</span>
+                    <span className="text-[11px] opacity-80">
+                      {matrix.reduce((acc, c) => acc + (c.stock_total || 0), 0)} uds
+                    </span>
+                  </button>
+
+                  {stores.map(st => {
+                    const stColor = getColor(st.id);
+                    const isSelected = selectedStoreFilter === st.id;
+                    const storeTotal = matrix.reduce((acc, c) => {
+                      if (st.id === 'tienda_1') return acc + (c.stock_tienda_1 || 0);
+                      if (st.id === 'tienda_2') return acc + (c.stock_tienda_2 || 0);
+                      if (st.id === 'tienda_3') return acc + (c.stock_tienda_3 || 0);
+                      return acc;
+                    }, 0);
+
+                    return (
+                      <button
+                        key={st.id}
+                        onClick={() => {
+                          setSelectedStoreFilter(st.id);
+                          setIsStoreFilterDrawerOpen(false);
+                        }}
+                        className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs font-medium transition-colors ${
+                          isSelected
+                            ? `${stColor.badgeClass} font-bold shadow-sm`
+                            : 'text-slate-300 hover:bg-slate-800/80'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full shrink-0"
+                            style={{ backgroundColor: stColor.hex }}
+                          />
+                          <span className="truncate">{st.name}</span>
+                        </div>
+                        <span className="text-[11px] opacity-80 font-mono">
+                          {storeTotal} uds
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Versión desktop (>= md): Pastillas de filtro horizontales */}
+            <div className="hidden md:flex items-center gap-1.5 bg-slate-900/60 p-1 rounded-xl border border-slate-800/80">
+              <span className="text-xs text-slate-400 px-2 flex items-center gap-1">
+                <Filter className="w-3.5 h-3.5 text-indigo-400" />
+                Sucursal:
+              </span>
+              <button
+                onClick={() => setSelectedStoreFilter('all')}
+                className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                  selectedStoreFilter === 'all'
+                    ? 'bg-indigo-600 text-white shadow-sm'
+                    : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                }`}
+              >
+                Todas
+              </button>
+              {stores.map(st => {
+                const isSelected = selectedStoreFilter === st.id;
+                const stColor = getColor(st.id);
+                return (
+                  <button
+                    key={st.id}
+                    onClick={() => setSelectedStoreFilter(st.id)}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                      isSelected
+                        ? `${stColor.badgeClass} font-bold shadow-sm`
+                        : 'text-slate-400 hover:text-white hover:bg-slate-800/60'
+                    }`}
+                  >
+                    <span
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{ backgroundColor: stColor.hex }}
+                    />
+                    <span>{st.name}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Buscador */}
+          <div className="relative w-full md:w-72">
+            <Search className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Buscar por SKU o Nombre..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-slate-900 border border-slate-800 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-colors"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
+              >
+                Limpiar
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
@@ -802,36 +1032,134 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
         </div>
       ) : activeTab === 'matrix' ? (
         /* ==================== TAB A: MATRIZ DE EXISTENCIAS ==================== */
-        <div className="w-full overflow-x-auto rounded-lg border border-slate-800 bg-slate-900 shadow-xl">
-          <table className="w-full text-left text-sm min-w-[850px] whitespace-nowrap">
-            <thead className="bg-slate-800/80 text-slate-300 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
-              <tr>
-                <th className="py-4 px-4">SKU</th>
-                <th className="py-4 px-4">Producto</th>
-                <th className="py-3 px-3 text-center">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_1').badgeClass}`}>
-                    <StoreIcon className="w-3 h-3 shrink-0" />
-                    <span>{getStoreName('tienda_1')}</span>
-                  </span>
-                </th>
-                <th className="py-3 px-3 text-center">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_2').badgeClass}`}>
-                    <StoreIcon className="w-3 h-3 shrink-0" />
-                    <span>{getStoreName('tienda_2')}</span>
-                  </span>
-                </th>
-                <th className="py-3 px-3 text-center">
-                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_3').badgeClass}`}>
-                    <StoreIcon className="w-3 h-3 shrink-0" />
-                    <span>{getStoreName('tienda_3')}</span>
-                  </span>
-                </th>
-                <th className="py-4 px-3 text-center text-amber-400">En Tránsito</th>
-                <th className="py-4 px-4 text-center">Stock Total</th>
-                <th className="py-4 px-4 text-right">Precio Costo</th>
-                <th className="py-4 px-4 text-right text-emerald-400">Precio Venta</th>
-              </tr>
-            </thead>
+        <div className="space-y-4">
+          {/* VISTA EN TARJETAS PARA MÓVIL (< md si mobileViewMode === 'cards') */}
+          {mobileViewMode === 'cards' && (
+            <div className="md:hidden space-y-3">
+              {filteredMatrix.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800 px-4">
+                  No se encontraron productos coincidentes con el criterio de búsqueda.
+                </div>
+              ) : (
+                filteredMatrix.map(product => {
+                  const s1 = product.stock_tienda_1 || 0;
+                  const s2 = product.stock_tienda_2 || 0;
+                  const s3 = product.stock_tienda_3 || 0;
+                  const sTrans = product.stock_transito || 0;
+                  const total = product.stock_total || (s1 + s2 + s3 + sTrans);
+
+                  return (
+                    <div
+                      key={product.id}
+                      onClick={() => setSelectedDetailProduct(product)}
+                      className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-3 active:scale-[0.99] transition-all cursor-pointer hover:border-slate-700 shadow-md"
+                    >
+                      {/* Fila 1: SKU, categoría y stock total */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                            <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-lg border border-indigo-500/20">
+                              {product.sku || `PROD-${product.id}`}
+                            </span>
+                            <span className="text-[11px] text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700/60 truncate max-w-[140px]">
+                              {product.category || 'General'}
+                            </span>
+                          </div>
+                          <h3 className="font-bold text-white text-sm line-clamp-2 leading-snug">
+                            {product.name}
+                          </h3>
+                        </div>
+                        <span
+                          className={`shrink-0 inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
+                            total > 0
+                              ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
+                              : 'bg-slate-800 text-slate-500 border border-slate-700'
+                          }`}
+                        >
+                          {total} uds
+                        </span>
+                      </div>
+
+                      {/* Fila 2: Existencias por Sucursal con sus colores */}
+                      <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800/60">
+                        {stores.map(st => {
+                          const stock = st.id === 'tienda_1' ? s1 : st.id === 'tienda_2' ? s2 : s3;
+                          const storeColor = getColor(st.id);
+                          return (
+                            <div
+                              key={st.id}
+                              className={`p-1.5 rounded-lg border text-center flex flex-col items-center justify-center ${
+                                stock > 0
+                                  ? storeColor.badgeClass
+                                  : 'bg-slate-800/40 text-slate-500 border-slate-800'
+                              }`}
+                            >
+                              <span className="text-[10px] font-semibold truncate max-w-full block opacity-85">
+                                {st.name.replace('Tienda ', 'T. ')}
+                              </span>
+                              <span className="font-mono font-bold text-xs mt-0.5">{stock}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {/* Fila 3: Precios y Tránsito */}
+                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-slate-400 text-[11px]">Venta:</span>
+                          <strong className="text-emerald-400 font-mono font-bold text-sm">
+                            Q {(product.sale_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </strong>
+                        </div>
+
+                        {sTrans > 0 ? (
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
+                            🚚 {sTrans} en camino
+                          </span>
+                        ) : (
+                          <span className="text-slate-500 text-[11px] font-mono">
+                            Costo: Q {(product.cost_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          )}
+
+          {/* VISTA EN TABLA (Desktop o Móvil si mobileViewMode === 'table') */}
+          <div className={`${mobileViewMode === 'cards' ? 'hidden md:block' : 'block'} w-full overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 shadow-xl`}>
+            <table className="w-full text-left text-sm min-w-[850px] whitespace-nowrap">
+              <thead className="bg-slate-800/80 text-slate-300 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
+                <tr>
+                  <th className="py-4 px-4">SKU</th>
+                  <th className="py-4 px-4">Producto</th>
+                  <th className="py-3 px-3 text-center">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_1').badgeClass}`}>
+                      <StoreIcon className="w-3 h-3 shrink-0" />
+                      <span>{getStoreName('tienda_1')}</span>
+                    </span>
+                  </th>
+                  <th className="py-3 px-3 text-center">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_2').badgeClass}`}>
+                      <StoreIcon className="w-3 h-3 shrink-0" />
+                      <span>{getStoreName('tienda_2')}</span>
+                    </span>
+                  </th>
+                  <th className="py-3 px-3 text-center">
+                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_3').badgeClass}`}>
+                      <StoreIcon className="w-3 h-3 shrink-0" />
+                      <span>{getStoreName('tienda_3')}</span>
+                    </span>
+                  </th>
+                  <th className="py-4 px-3 text-center text-amber-400">En Tránsito</th>
+                  <th className="py-4 px-4 text-center">Stock Total</th>
+                  <th className="py-4 px-4 text-right">Precio Costo</th>
+                  <th className="py-4 px-4 text-right text-emerald-400">Precio Venta</th>
+                </tr>
+              </thead>
               <tbody className="divide-y divide-slate-800/60 text-slate-200">
                 {filteredMatrix.length === 0 ? (
                   <tr>
@@ -938,6 +1266,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                 )}
               </tbody>
             </table>
+          </div>
         </div>
       ) : (
         /* ==================== TAB B: HISTORIAL Y TRÁNSITO ==================== */
@@ -1092,11 +1421,11 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       {/* MODAL 1: NUEVO PRODUCTO CON DISTRIBUCIÓN INICIAL */}
       {showAddProductModal && (
         <div 
-          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-full h-full max-w-full max-h-full bg-slate-950 flex flex-col m-0 p-0 overflow-hidden"
           style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
         >
           {/* 1. Header (arriba, altura fija) */}
-          <div className="w-full px-8 py-4 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
+          <div className="w-full px-4 sm:px-8 py-4 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-3">
               <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
                 <Package className="w-5 h-5" />
@@ -1427,11 +1756,11 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       {/* MODAL 2: NUEVO TRASLADO */}
       {showTransferModal && (
         <div 
-          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-full h-full max-w-full max-h-full bg-slate-950 flex flex-col m-0 p-0 overflow-hidden"
           style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
         >
           {/* 1. Header fijo superior */}
-          <div className="w-full px-6 py-3.5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
+          <div className="w-full px-4 sm:px-6 py-3.5 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">
                 <ArrowRightLeft className="w-5 h-5" />
@@ -1823,7 +2152,7 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       {/* MODAL 4: DETALLE DE EXISTENCIAS MULTITIENDA */}
       {selectedDetailProduct && (
         <div 
-          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-full h-full max-w-full max-h-full bg-slate-950 flex flex-col m-0 p-0 overflow-hidden"
           style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
         >
           {/* 1. Header fijo superior con Buscador / Selector rápido de Producto */}
@@ -2390,9 +2719,9 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
 
           {/* MODAL DE EDICIÓN A PANTALLA COMPLETA 100vw x 100vh */}
           {showEditModal && (
-            <div className="fixed inset-0 z-50 w-screen h-screen bg-slate-950 flex flex-col overflow-hidden">
+            <div className="fixed inset-0 z-50 w-full h-full max-w-full max-h-full bg-slate-950 flex flex-col overflow-hidden">
               {/* Cabecera superior fija */}
-              <div className="w-full border-b border-slate-800 px-6 py-4 flex items-center justify-between bg-slate-900/50 shrink-0">
+              <div className="w-full border-b border-slate-800 px-4 sm:px-6 py-4 flex items-center justify-between bg-slate-900/50 shrink-0">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 shrink-0">
                     <Pencil className="w-5 h-5" />
@@ -2742,11 +3071,11 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       {/* MODAL 6: DETALLE AMPLIO DE TRASLADO */}
       {selectedDetailTransfer && (
         <div 
-          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-screen h-screen bg-slate-950 flex flex-col m-0 p-0"
+          className="fixed inset-0 top-0 left-0 right-0 bottom-0 z-50 w-full h-full max-w-full max-h-full bg-slate-950 flex flex-col m-0 p-0 overflow-hidden"
           style={{ margin: 0, top: 0, left: 0, right: 0, bottom: 0 }}
         >
           {/* 1. Header fijo superior */}
-          <div className="w-full px-6 py-3 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
+          <div className="w-full px-4 sm:px-6 py-3 border-b border-slate-800 bg-slate-900/90 flex justify-between items-center shrink-0">
             <div className="space-y-1">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center shrink-0">

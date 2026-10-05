@@ -246,7 +246,7 @@ export default function App() {
   }
 
   return (
-    <div className={`min-h-screen flex flex-col md:flex-row transition-colors duration-200 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-[#F8FAFC] text-slate-900'}`}>
+    <div className={`min-h-screen flex flex-col md:flex-row w-full max-w-full overflow-x-hidden transition-colors duration-200 ${darkMode ? 'bg-slate-900 text-slate-100' : 'bg-[#F8FAFC] text-slate-900'}`}>
       {/* Sidebar Navigation */}
       <Sidebar
         darkMode={darkMode}
@@ -259,7 +259,7 @@ export default function App() {
       />
 
       {/* Main Content Area */}
-      <main className="w-full flex-1 flex flex-col overflow-y-auto overflow-x-hidden">
+      <main className="w-full max-w-full flex-1 flex flex-col overflow-y-auto overflow-x-hidden">
         <Header
           searchTerm={searchTerm}
           setSearchTerm={setSearchTerm}
@@ -272,13 +272,13 @@ export default function App() {
 
         {/* Global Toast Notification */}
         {showToast && (
-          <div className="fixed bottom-6 right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center space-x-3 border border-indigo-400/30 animate-bounce">
+          <div className="fixed bottom-20 md:bottom-6 right-4 sm:right-6 z-50 bg-indigo-600 text-white px-5 py-3 rounded-xl shadow-2xl flex items-center space-x-3 border border-indigo-400/30 animate-bounce">
             <CheckCircle className="w-5 h-5 text-emerald-300" />
             <span className="text-sm font-semibold">{toastMessage}</span>
           </div>
         )}
 
-        <div className="w-full flex-1 pb-24 md:pb-6 min-h-[calc(100vh-80px)]">
+        <div className="w-full max-w-full flex-1 pb-28 md:pb-6 min-h-[calc(100vh-80px)] overflow-x-hidden">
           
           {/* TAB 1: DASHBOARD DINÁMICO DESDE SQLITE */}
           {activeTab === 'dashboard' && (
