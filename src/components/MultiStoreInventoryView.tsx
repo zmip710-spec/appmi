@@ -24,9 +24,7 @@ import {
   ChevronDown,
   ChevronUp,
   Filter,
-  Wand2,
-  LayoutGrid,
-  List
+  Wand2
 } from 'lucide-react';
 import {
   fetchStoresApi,
@@ -59,7 +57,6 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStoreFilter, setSelectedStoreFilter] = useState<string>('all');
   const [isStoreFilterDrawerOpen, setIsStoreFilterDrawerOpen] = useState(false);
-  const [mobileViewMode, setMobileViewMode] = useState<'cards' | 'table'>('cards');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -837,36 +834,6 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
               )}
             </button>
           </div>
-
-          {/* Selector de modo de vista móvil (Tarjetas vs Tabla) */}
-          {activeTab === 'matrix' && (
-            <div className="flex md:hidden items-center gap-1 bg-slate-900/90 border border-slate-800 p-1 rounded-xl">
-              <button
-                onClick={() => setMobileViewMode('cards')}
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
-                  mobileViewMode === 'cards'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                title="Vista en Tarjetas"
-              >
-                <LayoutGrid className="w-4 h-4" />
-                <span className="text-[11px]">Tarjetas</span>
-              </button>
-              <button
-                onClick={() => setMobileViewMode('table')}
-                className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition-colors ${
-                  mobileViewMode === 'table'
-                    ? 'bg-indigo-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                title="Vista en Tabla"
-              >
-                <List className="w-4 h-4" />
-                <span className="text-[11px]">Tabla</span>
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Fila 2: Filtros de Sucursal y Buscador */}
@@ -1033,15 +1000,43 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
       ) : activeTab === 'matrix' ? (
         /* ==================== TAB A: MATRIZ DE EXISTENCIAS ==================== */
         <div className="space-y-4">
-          {/* VISTA EN TARJETAS PARA MÓVIL (< md si mobileViewMode === 'cards') */}
-          {mobileViewMode === 'cards' && (
-            <div className="md:hidden space-y-3">
-              {filteredMatrix.length === 0 ? (
-                <div className="py-12 text-center text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800 px-4">
-                  No se encontraron productos coincidentes con el criterio de búsqueda.
-                </div>
+          {filteredMatrix.length === 0 ? (
+            <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-8 sm:p-12 text-center space-y-3 w-full shadow-lg">
+              <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
+                <Boxes className="w-6 h-6" />
+              </div>
+              <h3 className="text-base sm:text-lg font-bold text-white">No se encontraron productos</h3>
+              <p className="text-xs sm:text-sm text-slate-400 max-w-sm mx-auto">
+                {searchTerm || selectedStoreFilter !== 'all'
+                  ? 'No hay existencias coincidentes con el filtro o término de búsqueda ingresado.'
+                  : 'Aún no tienes productos registrados en la matriz de inventario.'}
+              </p>
+              {(searchTerm || selectedStoreFilter !== 'all') ? (
+                <button
+                  onClick={() => {
+                    setSearchTerm('');
+                    setSelectedStoreFilter('all');
+                  }}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold rounded-xl transition-colors cursor-pointer"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>Restablecer Filtros</span>
+                </button>
               ) : (
-                filteredMatrix.map(product => {
+                <button
+                  onClick={() => setShowAddProductModal(true)}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer shadow-md"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Registrar Primer Producto</span>
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* VISTA EN TARJETAS PARA MÓVIL Y TABLETS (lg:hidden) - 100% RESPONSIVA, CERO SCROLL HORIZONTAL */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:hidden gap-3 w-full">
+                {filteredMatrix.map(product => {
                   const s1 = product.stock_tienda_1 || 0;
                   const s2 = product.stock_tienda_2 || 0;
                   const s3 = product.stock_tienda_3 || 0;
@@ -1052,221 +1047,244 @@ export const MultiStoreInventoryView: React.FC<MultiStoreInventoryViewProps> = (
                     <div
                       key={product.id}
                       onClick={() => setSelectedDetailProduct(product)}
-                      className="bg-slate-900/90 border border-slate-800 rounded-xl p-3.5 space-y-3 active:scale-[0.99] transition-all cursor-pointer hover:border-slate-700 shadow-md"
+                      className="bg-slate-900/90 hover:bg-slate-800/90 border border-slate-800 hover:border-slate-700/80 rounded-2xl p-3.5 sm:p-4 space-y-3 transition-all cursor-pointer shadow-md active:scale-[0.99] flex flex-col justify-between"
                     >
-                      {/* Fila 1: SKU, categoría y stock total */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
-                            <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-lg border border-indigo-500/20">
-                              {product.sku || `PROD-${product.id}`}
-                            </span>
-                            <span className="text-[11px] text-slate-400 bg-slate-800/80 px-2.5 py-0.5 rounded-lg border border-slate-700/60 truncate max-w-[140px]">
-                              {product.category || 'General'}
-                            </span>
+                      <div className="space-y-2.5">
+                        {/* Fila 1: SKU badge, Categoría y Badge de Stock Total */}
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-1.5 flex-wrap mb-1">
+                              <span className="font-mono text-xs font-bold text-indigo-400 bg-indigo-500/10 px-2.5 py-0.5 rounded-lg border border-indigo-500/20">
+                                {product.sku || `PROD-${product.id}`}
+                              </span>
+                              <span className="text-[11px] font-medium text-slate-400 bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700/60 truncate max-w-[130px]">
+                                {product.category || 'General'}
+                              </span>
+                            </div>
+                            <h3 className="font-bold text-white text-sm sm:text-base leading-tight line-clamp-2">
+                              {product.name}
+                            </h3>
+                            {product.description && (
+                              <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">
+                                {product.description}
+                              </p>
+                            )}
                           </div>
-                          <h3 className="font-bold text-white text-sm line-clamp-2 leading-snug">
-                            {product.name}
-                          </h3>
-                        </div>
-                        <span
-                          className={`shrink-0 inline-flex items-center justify-center px-2.5 py-1 rounded-full text-xs font-bold font-mono ${
-                            total > 0
-                              ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30'
-                              : 'bg-slate-800 text-slate-500 border border-slate-700'
-                          }`}
-                        >
-                          {total} uds
-                        </span>
-                      </div>
 
-                      {/* Fila 2: Existencias por Sucursal con sus colores */}
-                      <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800/60">
-                        {stores.map(st => {
-                          const stock = st.id === 'tienda_1' ? s1 : st.id === 'tienda_2' ? s2 : s3;
-                          const storeColor = getColor(st.id);
-                          return (
-                            <div
-                              key={st.id}
-                              className={`p-1.5 rounded-lg border text-center flex flex-col items-center justify-center ${
-                                stock > 0
-                                  ? storeColor.badgeClass
-                                  : 'bg-slate-800/40 text-slate-500 border-slate-800'
+                          <div className="shrink-0 text-right">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-bold font-mono ${
+                                total > 0
+                                  ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/30'
+                                  : 'bg-slate-800 text-slate-500 border border-slate-700'
                               }`}
                             >
-                              <span className="text-[10px] font-semibold truncate max-w-full block opacity-85">
-                                {st.name.replace('Tienda ', 'T. ')}
-                              </span>
-                              <span className="font-mono font-bold text-xs mt-0.5">{stock}</span>
-                            </div>
-                          );
-                        })}
+                              <Package className="w-3 h-3" />
+                              <span>{total} uds</span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Fila 2: Existencias por Sucursal en Cuadrícula (100% adaptable) */}
+                        <div className="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-800/70">
+                          {stores.map(st => {
+                            const stock = st.id === 'tienda_1' ? s1 : st.id === 'tienda_2' ? s2 : s3;
+                            const storeColor = getColor(st.id);
+                            return (
+                              <div
+                                key={st.id}
+                                className={`p-2 rounded-xl border text-center flex flex-col items-center justify-center transition-all ${
+                                  stock > 0
+                                    ? `${storeColor.badgeClass} shadow-sm`
+                                    : 'bg-slate-800/30 text-slate-500 border-slate-800/60'
+                                }`}
+                              >
+                                <div className="flex items-center gap-1 max-w-full">
+                                  <span
+                                    className="w-1.5 h-1.5 rounded-full shrink-0"
+                                    style={{ backgroundColor: storeColor.hex }}
+                                  />
+                                  <span className="text-[10px] font-bold truncate">
+                                    {st.name}
+                                  </span>
+                                </div>
+                                <span className="text-sm font-extrabold font-mono mt-0.5">
+                                  {stock}
+                                </span>
+                                <span className="text-[9px] uppercase tracking-wider opacity-75 font-semibold">
+                                  {stock === 1 ? 'ud' : 'uds'}
+                                </span>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
 
-                      {/* Fila 3: Precios y Tránsito */}
-                      <div className="flex items-center justify-between pt-2 border-t border-slate-800/60 text-xs">
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-slate-400 text-[11px]">Venta:</span>
-                          <strong className="text-emerald-400 font-mono font-bold text-sm">
+                      {/* Fila 3: Precios, Estado de Tránsito y Acción */}
+                      <div className="flex items-center justify-between pt-2.5 border-t border-slate-800/70 text-xs">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="text-slate-400 text-[11px] font-medium">Venta:</span>
+                          <strong className="text-emerald-400 font-mono font-bold text-sm sm:text-base">
                             Q {(product.sale_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                           </strong>
                         </div>
 
-                        {sTrans > 0 ? (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-300 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                            🚚 {sTrans} en camino
+                        <div className="flex items-center gap-2">
+                          {sTrans > 0 ? (
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-amber-300 bg-amber-500/10 border border-amber-500/25 px-2 py-0.5 rounded-lg">
+                              🚚 {sTrans}
+                            </span>
+                          ) : (
+                            (product.cost_price || 0) > 0 && (
+                              <span className="text-slate-500 font-mono text-[11px] hidden sm:inline">
+                                Costo: Q {(product.cost_price || 0).toFixed(2)}
+                              </span>
+                            )
+                          )}
+
+                          <span className="text-slate-400 hover:text-white inline-flex items-center gap-0.5 text-xs font-semibold bg-slate-800/70 px-2 py-1 rounded-lg border border-slate-700/60">
+                            <span>Ver</span>
+                            <ArrowRight className="w-3 h-3" />
                           </span>
-                        ) : (
-                          <span className="text-slate-500 text-[11px] font-mono">
-                            Costo: Q {(product.cost_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                          </span>
-                        )}
+                        </div>
                       </div>
                     </div>
                   );
-                })
-              )}
-            </div>
+                })}
+              </div>
+
+              {/* VISTA EN TABLA ÚNICAMENTE PARA PANTALLAS GRANDES DE ESCRITORIO (hidden lg:block) */}
+              <div className="hidden lg:block w-full overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 shadow-xl">
+                <table className="w-full text-left text-sm whitespace-nowrap">
+                  <thead className="bg-slate-800/80 text-slate-300 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
+                    <tr>
+                      <th className="py-4 px-4">SKU</th>
+                      <th className="py-4 px-4">Producto</th>
+                      <th className="py-3 px-3 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_1').badgeClass}`}>
+                          <StoreIcon className="w-3 h-3 shrink-0" />
+                          <span>{getStoreName('tienda_1')}</span>
+                        </span>
+                      </th>
+                      <th className="py-3 px-3 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_2').badgeClass}`}>
+                          <StoreIcon className="w-3 h-3 shrink-0" />
+                          <span>{getStoreName('tienda_2')}</span>
+                        </span>
+                      </th>
+                      <th className="py-3 px-3 text-center">
+                        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_3').badgeClass}`}>
+                          <StoreIcon className="w-3 h-3 shrink-0" />
+                          <span>{getStoreName('tienda_3')}</span>
+                        </span>
+                      </th>
+                      <th className="py-4 px-3 text-center text-amber-400">En Tránsito</th>
+                      <th className="py-4 px-4 text-center">Stock Total</th>
+                      <th className="py-4 px-4 text-right">Precio Costo</th>
+                      <th className="py-4 px-4 text-right text-emerald-400">Precio Venta</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/60 text-slate-200">
+                    {filteredMatrix.map(product => {
+                      const s1 = product.stock_tienda_1 || 0;
+                      const s2 = product.stock_tienda_2 || 0;
+                      const s3 = product.stock_tienda_3 || 0;
+                      const sTrans = product.stock_transito || 0;
+                      const total = product.stock_total || (s1 + s2 + s3 + sTrans);
+
+                      return (
+                        <tr
+                          key={product.id}
+                          onClick={() => setSelectedDetailProduct(product)}
+                          className="cursor-pointer hover:bg-slate-800/60 transition-colors border-b border-slate-800/50"
+                        >
+                          {/* SKU */}
+                          <td className="py-4 px-4 font-mono text-xs font-bold text-indigo-400">
+                            {product.sku || `PROD-${product.id}`}
+                          </td>
+
+                          {/* Producto */}
+                          <td className="py-4 px-4">
+                            <div className="font-semibold text-slate-100">{product.name}</div>
+                            {product.description && (
+                              <div className="text-xs text-slate-400 line-clamp-1">{product.description}</div>
+                            )}
+                          </td>
+
+                          {/* Stock Tienda Central */}
+                          <td className="py-4 px-3 text-center">
+                            {s1 > 0 ? (
+                              <span className={`inline-flex items-center justify-center min-w-[2.2rem] px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${getColor('tienda_1').badgeClass}`}>
+                                {s1}
+                              </span>
+                            ) : (
+                              <span className="text-slate-500 font-mono text-xs opacity-50">0</span>
+                            )}
+                          </td>
+
+                          {/* Stock Sucursal Norte */}
+                          <td className="py-4 px-3 text-center">
+                            {s2 > 0 ? (
+                              <span className={`inline-flex items-center justify-center min-w-[2.2rem] px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${getColor('tienda_2').badgeClass}`}>
+                                {s2}
+                              </span>
+                            ) : (
+                              <span className="text-slate-500 font-mono text-xs opacity-50">0</span>
+                            )}
+                          </td>
+
+                          {/* Stock Sucursal Sur */}
+                          <td className="py-4 px-3 text-center">
+                            {s3 > 0 ? (
+                              <span className={`inline-flex items-center justify-center min-w-[2.2rem] px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${getColor('tienda_3').badgeClass}`}>
+                                {s3}
+                              </span>
+                            ) : (
+                              <span className="text-slate-500 font-mono text-xs opacity-50">0</span>
+                            )}
+                          </td>
+
+                          {/* Stock En Tránsito */}
+                          <td className="py-4 px-3 text-center">
+                            {sTrans > 0 ? (
+                              <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
+                                🚚 {sTrans} uds
+                              </span>
+                            ) : (
+                              <span className="text-slate-500 font-mono text-xs opacity-50">-</span>
+                            )}
+                          </td>
+
+                          {/* Stock Total Consolidado */}
+                          <td className="py-4 px-4 text-center font-semibold">
+                            <span
+                              className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold ${
+                                total > 0
+                                  ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-sm'
+                                  : 'bg-slate-800 text-slate-500 border border-slate-700'
+                              }`}
+                            >
+                              {total} unid.
+                            </span>
+                          </td>
+
+                          {/* Precio Costo (Q) */}
+                          <td className="py-4 px-4 text-right font-mono text-xs font-bold text-slate-200">
+                            Q {(product.cost_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+
+                          {/* Precio Venta (Q) */}
+                          <td className="py-4 px-4 text-right font-mono text-xs font-black text-emerald-400">
+                            Q {(product.sale_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
-
-          {/* VISTA EN TABLA (Desktop o Móvil si mobileViewMode === 'table') */}
-          <div className={`${mobileViewMode === 'cards' ? 'hidden md:block' : 'block'} w-full overflow-x-auto rounded-xl border border-slate-800 bg-slate-900 shadow-xl`}>
-            <table className="w-full text-left text-sm min-w-[850px] whitespace-nowrap">
-              <thead className="bg-slate-800/80 text-slate-300 text-xs font-semibold uppercase tracking-wider border-b border-slate-800">
-                <tr>
-                  <th className="py-4 px-4">SKU</th>
-                  <th className="py-4 px-4">Producto</th>
-                  <th className="py-3 px-3 text-center">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_1').badgeClass}`}>
-                      <StoreIcon className="w-3 h-3 shrink-0" />
-                      <span>{getStoreName('tienda_1')}</span>
-                    </span>
-                  </th>
-                  <th className="py-3 px-3 text-center">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_2').badgeClass}`}>
-                      <StoreIcon className="w-3 h-3 shrink-0" />
-                      <span>{getStoreName('tienda_2')}</span>
-                    </span>
-                  </th>
-                  <th className="py-3 px-3 text-center">
-                    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold ${getColor('tienda_3').badgeClass}`}>
-                      <StoreIcon className="w-3 h-3 shrink-0" />
-                      <span>{getStoreName('tienda_3')}</span>
-                    </span>
-                  </th>
-                  <th className="py-4 px-3 text-center text-amber-400">En Tránsito</th>
-                  <th className="py-4 px-4 text-center">Stock Total</th>
-                  <th className="py-4 px-4 text-right">Precio Costo</th>
-                  <th className="py-4 px-4 text-right text-emerald-400">Precio Venta</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-800/60 text-slate-200">
-                {filteredMatrix.length === 0 ? (
-                  <tr>
-                    <td colSpan={9} className="py-12 text-center text-slate-500">
-                      No se encontraron productos coincidentes con el criterio de búsqueda.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredMatrix.map(product => {
-                    const s1 = product.stock_tienda_1 || 0;
-                    const s2 = product.stock_tienda_2 || 0;
-                    const s3 = product.stock_tienda_3 || 0;
-                    const sTrans = product.stock_transito || 0;
-                    const total = product.stock_total || (s1 + s2 + s3 + sTrans);
-
-                    return (
-                      <tr
-                        key={product.id}
-                        onClick={() => setSelectedDetailProduct(product)}
-                        className="cursor-pointer hover:bg-slate-800/60 transition-colors border-b border-slate-800/50"
-                      >
-                        {/* SKU */}
-                        <td className="py-4 px-4 font-mono text-xs font-bold text-indigo-400">
-                          {product.sku || `PROD-${product.id}`}
-                        </td>
-
-                        {/* Producto */}
-                        <td className="py-4 px-4">
-                          <div className="font-semibold text-slate-100">{product.name}</div>
-                          {product.description && (
-                            <div className="text-xs text-slate-400 line-clamp-1">{product.description}</div>
-                          )}
-                        </td>
-
-                        {/* Stock Tienda Central */}
-                        <td className="py-4 px-3 text-center">
-                          {s1 > 0 ? (
-                            <span className={`inline-flex items-center justify-center min-w-[2.2rem] px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${getColor('tienda_1').badgeClass}`}>
-                              {s1}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 font-mono text-xs opacity-50">0</span>
-                          )}
-                        </td>
-
-                        {/* Stock Sucursal Norte */}
-                        <td className="py-4 px-3 text-center">
-                          {s2 > 0 ? (
-                            <span className={`inline-flex items-center justify-center min-w-[2.2rem] px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${getColor('tienda_2').badgeClass}`}>
-                              {s2}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 font-mono text-xs opacity-50">0</span>
-                          )}
-                        </td>
-
-                        {/* Stock Sucursal Sur */}
-                        <td className="py-4 px-3 text-center">
-                          {s3 > 0 ? (
-                            <span className={`inline-flex items-center justify-center min-w-[2.2rem] px-2.5 py-0.5 rounded-lg text-xs font-bold font-mono ${getColor('tienda_3').badgeClass}`}>
-                              {s3}
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 font-mono text-xs opacity-50">0</span>
-                          )}
-                        </td>
-
-                        {/* Stock En Tránsito */}
-                        <td className="py-4 px-3 text-center">
-                          {sTrans > 0 ? (
-                            <span className="inline-flex items-center justify-center gap-1 px-2.5 py-0.5 rounded-lg text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/30">
-                              🚚 {sTrans} uds
-                            </span>
-                          ) : (
-                            <span className="text-slate-500 font-mono text-xs opacity-50">-</span>
-                          )}
-                        </td>
-
-                        {/* Stock Total Consolidado */}
-                        <td className="py-4 px-4 text-center font-semibold">
-                          <span
-                            className={`inline-flex items-center justify-center px-3 py-1 rounded-full text-xs font-bold ${
-                              total > 0
-                                ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 shadow-sm'
-                                : 'bg-slate-800 text-slate-500 border border-slate-700'
-                            }`}
-                          >
-                            {total} unid.
-                          </span>
-                        </td>
-
-                        {/* Precio Costo (Q) */}
-                        <td className="py-4 px-4 text-right font-mono text-xs font-bold text-slate-200">
-                          Q {(product.cost_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-
-                        {/* Precio Venta (Q) */}
-                        <td className="py-4 px-4 text-right font-mono text-xs font-black text-emerald-400">
-                          Q {(product.sale_price || 0).toLocaleString('es-GT', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-            </table>
-          </div>
         </div>
       ) : (
         /* ==================== TAB B: HISTORIAL Y TRÁNSITO ==================== */
